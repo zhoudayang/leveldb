@@ -71,8 +71,9 @@ class Table {
       void* arg,
       void (*handle_result)(void* arg, const Slice& k, const Slice& v));
 
-
+  // read meta block
   void ReadMeta(const Footer& footer);
+  // read filter block
   void ReadFilter(const Slice& filter_handle_value);
 
   // No copying allowed
