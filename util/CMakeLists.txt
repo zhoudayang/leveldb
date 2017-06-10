@@ -1,0 +1,10 @@
+link_libraries(leveldb_test leveldb)
+
+add_executable(arena_test arena_test.cc)
+add_executable(bloom_test bloom_test.cc)
+add_executable(cache_test cache_test.cc)
+add_executable(coding_test coding_test.cc)
+add_executable(crc32c_test crc32c_test.cc)
+add_executable(env_posix_test env_posix_test.cc)
+add_executable(env_test env_test.cc)
+add_executable(hash_test hash_test.cc)
