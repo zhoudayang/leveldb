@@ -5,6 +5,7 @@
 #ifndef STORAGE_LEVELDB_DB_DBFORMAT_H_
 #define STORAGE_LEVELDB_DB_DBFORMAT_H_
 
+/// 依赖比较少，可以看
 #include <stdio.h>
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"

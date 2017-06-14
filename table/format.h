@@ -38,6 +38,7 @@ class BlockHandle {
   Status DecodeFrom(Slice* input);
 
   // Maximum encoding length of a BlockHandle
+  // 两个varint64数占用的空间最大为20bytes
   enum { kMaxEncodedLength = 10 + 10 };
 
  private:

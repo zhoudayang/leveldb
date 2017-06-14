@@ -40,6 +40,7 @@ struct TableBuilder::Rep {
   // blocks.
   //
   // Invariant: r->pending_index_entry is true only if data_block is empty.
+  // 是否需要更新index block ?
   // 若data_block为空，那么pending_index_entry为true
   bool pending_index_entry;
   // add 进入 index block 的handle
@@ -62,7 +63,7 @@ struct TableBuilder::Rep {
                      : new FilterBlockBuilder(opt.filter_policy)),
       // 当前的data block 为空
         pending_index_entry(false) {
-    // index_block 的 restart_interval 总是为1
+    // index_block 的 restart_interval总是为1
     index_block_options.block_restart_interval = 1;
   }
 };
@@ -116,6 +117,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
     std::string handle_encoding;
     // 记录第一个data block，保存进入index_block之中
     r->pending_handle.EncodeTo(&handle_encoding);
+    // 在index block之中添加这个block的handle信息
     r->index_block.Add(r->last_key, Slice(handle_encoding));
     r->pending_index_entry = false;
   }
@@ -125,9 +127,11 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
     r->filter_block->AddKey(key);
   }
 
+  // 记录last key
   r->last_key.assign(key.data(), key.size());
   // 记录add key的总数
   r->num_entries++;
+  // 向data block之中添加这一条记录
   r->data_block.Add(key, value);
 
   const size_t estimated_block_size = r->data_block.CurrentSizeEstimate();

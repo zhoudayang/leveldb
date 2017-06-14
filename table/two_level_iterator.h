@@ -25,7 +25,7 @@ struct ReadOptions;
 extern Iterator* NewTwoLevelIterator(
     Iterator* index_iter,
     Iterator* (*block_function)(
-        void* arg,
+        void* arg, // Table 对象本身
         const ReadOptions& options,
         const Slice& index_value),
     void* arg,

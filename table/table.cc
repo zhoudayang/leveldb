@@ -98,12 +98,11 @@ Status Table::Open(const Options& options,
 
 void Table::ReadMeta(const Footer& footer) {
   // 没有设置filter_policy, return
-  if (rep_->options.filter_policy == NULL) {
+  if (rep_->options.filter_policy == NULL
+      || footer.metaindex_handle().size() == 0) {
     return;  // Do not need any metadata
   }
 
-  // TODO(sanjay): Skip this if footer.metaindex_handle() size indicates
-  // it is an empty block.
   ReadOptions opt;
   if (rep_->options.paranoid_checks) {
     opt.verify_checksums = true;
@@ -276,7 +275,7 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k,
   return s;
 }
 
-// 返回的结构可能不正确，可能是rep_->metaindex_handle.offset()的值来做近似
+// 返回的offset可能不正确，可能是rep_->metaindex_handle.offset()的值来做近似
 uint64_t Table::ApproximateOffsetOf(const Slice& key) const {
   Iterator* index_iter =
       rep_->index_block->NewIterator(rep_->options.comparator);

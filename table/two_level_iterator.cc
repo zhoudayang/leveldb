@@ -161,7 +161,7 @@ void TwoLevelIterator::SetDataIterator(Iterator* data_iter) {
   data_iter_.Set(data_iter);
 }
 
-// initialize data block
+// initialize data iterator
 void TwoLevelIterator::InitDataBlock() {
   if (!index_iter_.Valid()) {
     SetDataIterator(NULL);
@@ -181,8 +181,10 @@ void TwoLevelIterator::InitDataBlock() {
   }
 }
 
+
 }  // namespace
 
+// 输入了index iterator, 从index handle 到 block handle之间的转换函数
 Iterator* NewTwoLevelIterator(
     Iterator* index_iter,
     BlockFunction block_function,

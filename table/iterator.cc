@@ -67,6 +67,7 @@ Iterator* NewEmptyIterator() {
   return new EmptyIterator(Status::OK());
 }
 
+// new iterator, begin with given status
 Iterator* NewErrorIterator(const Status& status) {
   return new EmptyIterator(status);
 }

@@ -27,6 +27,7 @@
 //
 // ... prev vs. next pointer ordering ...
 
+/// 可以看，和dbformat一起看
 #include <assert.h>
 #include <stdlib.h>
 #include "port/port.h"
@@ -95,6 +96,7 @@ class SkipList {
   };
 
  private:
+  // skip list 最大高度为12
   enum { kMaxHeight = 12 };
 
   // Immutable after construction
@@ -242,6 +244,7 @@ inline void SkipList<Key,Comparator>::Iterator::SeekToLast() {
 template<typename Key, class Comparator>
 int SkipList<Key,Comparator>::RandomHeight() {
   // Increase height with probability 1 in kBranching
+  // 有四分之一的可能性
   static const unsigned int kBranching = 4;
   int height = 1;
   while (height < kMaxHeight && ((rnd_.Next() % kBranching) == 0)) {

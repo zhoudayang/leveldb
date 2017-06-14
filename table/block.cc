@@ -21,6 +21,8 @@ inline uint32_t Block::NumRestarts() const {
   return DecodeFixed32(data_ + size_ - sizeof(uint32_t));
 }
 
+// 读取contents对应的block
+// 实际上读取的是data block
 Block::Block(const BlockContents& contents)
     : data_(contents.data.data()),
       size_(contents.data.size()),
@@ -139,17 +141,21 @@ class Block::Iter : public Iterator {
         num_restarts_(num_restarts), // restart数组的元素个数
         current_(restarts_), // current_ is offset in data_ of current entry.
         restart_index_(num_restarts_) { // restart index
+    // 断言restarts数组中的元素个数大于0
     assert(num_restarts_ > 0);
   }
   // 当前位置指针不可超过restarts_(restart数组的开头位置)
   virtual bool Valid() const { return current_ < restarts_; }
+
   // return status
   virtual Status status() const { return status_; }
+
   // return key
   virtual Slice key() const {
     assert(Valid());
     return key_;
   }
+
   // return value
   virtual Slice value() const {
     assert(Valid());
@@ -252,7 +258,7 @@ class Block::Iter : public Iterator {
   }
 
  private:
-  // 崩溃，设置status_以记录
+  // 崩溃，设置status_以记录，并做好相关的清理工作
   void CorruptionError() {
     current_ = restarts_;
     restart_index_ = num_restarts_;

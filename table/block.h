@@ -12,7 +12,17 @@
 // data block iterator implementation
 // complete: 2017-06-10
 namespace leveldb {
-
+/*
+// data, cachable, heap_allocated
+// block struct
+// 记录是否能被cached
+// 记录是否是在堆上分配的内存
+struct BlockContents {
+  Slice data;           // Actual contents of data
+  bool cachable;        // True iff data can be cached
+  bool heap_allocated;  // True iff caller should delete[] data.data()
+};
+ */
 struct BlockContents;
 class Comparator;
 
@@ -30,8 +40,8 @@ class Block {
  private:
   uint32_t NumRestarts() const;
 
-  const char* data_;
-  size_t size_;
+  const char* data_; // 指向data block 开始处
+  size_t size_;   // data block的大小
   uint32_t restart_offset_;     // Offset in data_ of restart array
   bool owned_;                  // Block owns data_[], if own need to call free when destruction
 
