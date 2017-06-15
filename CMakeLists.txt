@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 
-
-set(CMAKE_C_COMPILER /usr/local/bin/gcc-6)
-set(CMAKE_CXX_COMPILER  /usr/local/bin/g++-6)
 link_libraries(pthread)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x -g -O0")
 
+if(APPLE)
 add_compile_options(
         -pthread
         -DOS_MACOSX
@@ -16,6 +14,24 @@ add_compile_options(
         -msse4.2
         -DLEVELDB_PLATFROM_POSIX_SSE
 )
+else()
+    add_compile_options(
+            -std=c++0x
+            -fno-builtin-memcmp
+            -pthread
+            -DOS_LINUX
+            -DLEVELDB_PLATFORM_POSIX
+            -DLEVELDB_ATOMIC_PRESENT
+            -DLEVELDB_PLATFORM_POSIX_SSE
+            -DSNAPPY
+            -fPIC
+            -msse4.2
+            -ggdb
+            -O0
+    )
+    link_libraries(snappy)
+endif()
+
 
 set(SOURCE_FILES
         db/builder.cc

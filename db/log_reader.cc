@@ -20,7 +20,7 @@ Reader::Reader(SequentialFile* file, Reporter* reporter, bool checksum,
     : file_(file),
       reporter_(reporter),
       checksum_(checksum),
-      backing_store_(new char[kBlockSize]),
+      backing_store_(new char[kBlockSize]), /// 用于存放读取的数据块
       buffer_(),
       eof_(false),
       last_record_offset_(0),
@@ -34,12 +34,16 @@ Reader::~Reader() {
 }
 
 bool Reader::SkipToInitialBlock() {
+  /// initial_offset_ 若大于 block的大小，就取余
   size_t offset_in_block = initial_offset_ % kBlockSize;
+  /// block 的开始位置
   uint64_t block_start_location = initial_offset_ - offset_in_block;
 
   // Don't search a block if we'd be in the trailer
+  /// 不在末尾6bytes处search
   if (offset_in_block > kBlockSize - 6) {
     offset_in_block = 0;
+    // 在下一个数据块查找
     block_start_location += kBlockSize;
   }
 
@@ -66,10 +70,10 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
 
   scratch->clear();
   record->clear();
-  bool in_fragmented_record = false;
+  bool in_fragmented_record = false; // 上条记录是否完整
   // Record offset of the logical record that we're reading
   // 0 is a dummy value to make compilers happy
-  uint64_t prospective_record_offset = 0;
+  uint64_t prospective_record_offset = 0; // 记录的偏移量
 
   Slice fragment;
   while (true) {
@@ -77,7 +81,7 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
 
     // ReadPhysicalRecord may have only had an empty trailer remaining in its
     // internal buffer. Calculate the offset of the next physical record now
-    // that it has returned, properly accounting for its header size.
+    // that it has retu rned, properly accounting for its header size.
     uint64_t physical_record_offset =
         end_of_buffer_offset_ - buffer_.size() - kHeaderSize - fragment.size();
 
@@ -87,7 +91,7 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
       } else if (record_type == kLastType) {
         resyncing_ = false;
         continue;
-      } else {
+      } else { // kFullType
         resyncing_ = false;
       }
     }
@@ -124,25 +128,30 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
           }
         }
         prospective_record_offset = physical_record_offset;
+        // 将record记录加入scratch之中
         scratch->assign(fragment.data(), fragment.size());
         in_fragmented_record = true;
         break;
 
       case kMiddleType:
+        // 上条记录不完整，报错
         if (!in_fragmented_record) {
           ReportCorruption(fragment.size(),
                            "missing start of fragmented record(1)");
         } else {
+          // 添加中间的数据块
           scratch->append(fragment.data(), fragment.size());
         }
         break;
 
       case kLastType:
+        // 上条记录不完整，报错退出
         if (!in_fragmented_record) {
           ReportCorruption(fragment.size(),
                            "missing start of fragmented record(2)");
         } else {
           scratch->append(fragment.data(), fragment.size());
+          // 记录最终的结果
           *record = Slice(*scratch);
           last_record_offset_ = prospective_record_offset;
           return true;
@@ -192,17 +201,22 @@ void Reader::ReportCorruption(uint64_t bytes, const char* reason) {
 void Reader::ReportDrop(uint64_t bytes, const Status& reason) {
   if (reporter_ != NULL &&
       end_of_buffer_offset_ - buffer_.size() - bytes >= initial_offset_) {
+    // 报告错误
     reporter_->Corruption(static_cast<size_t>(bytes), reason);
   }
 }
 
+/// 读取物理记录
 unsigned int Reader::ReadPhysicalRecord(Slice* result) {
+  // loop forever
   while (true) {
     if (buffer_.size() < kHeaderSize) {
       if (!eof_) {
         // Last read was a full read, so this is a trailer to skip
         buffer_.clear();
+        /// 读取下一个数据块
         Status status = file_->Read(kBlockSize, &buffer_, backing_store_);
+        /// 更新块级别的offset
         end_of_buffer_offset_ += buffer_.size();
         if (!status.ok()) {
           buffer_.clear();
@@ -213,11 +227,13 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
           eof_ = true;
         }
         continue;
-      } else {
+      } else { /// EOF && buffer_.size() < kHeaderSize
         // Note that if buffer_ is non-empty, we have a truncated header at the
         // end of the file, which can be caused by the writer crashing in the
         // middle of writing the header. Instead of considering this an error,
         // just report EOF.
+        /// 如果buffer_不为空，可能是因为writer在写入header的过程中崩溃了，这不是错误，
+        /// 将这种情况也视为EOF
         buffer_.clear();
         return kEof;
       }
@@ -228,7 +244,9 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
     const uint32_t a = static_cast<uint32_t>(header[4]) & 0xff;
     const uint32_t b = static_cast<uint32_t>(header[5]) & 0xff;
     const unsigned int type = header[6];
+    // 获取length记录
     const uint32_t length = a | (b << 8);
+    /// 一条记录的长度不可能超出kBlockSize
     if (kHeaderSize + length > buffer_.size()) {
       size_t drop_size = buffer_.size();
       buffer_.clear();
@@ -239,9 +257,10 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
       // If the end of the file has been reached without reading |length| bytes
       // of payload, assume the writer died in the middle of writing the record.
       // Don't report a corruption.
+      /// 假设writer在写入的过程之中崩溃，不认为是错误
       return kEof;
     }
-
+    /// Zero type 的长度不可能为0，这是一个错误
     if (type == kZeroType && length == 0) {
       // Skip zero length record without reporting any drops since
       // such records are produced by the mmap based writing code in
@@ -254,6 +273,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
     if (checksum_) {
       uint32_t expected_crc = crc32c::Unmask(DecodeFixed32(header));
       uint32_t actual_crc = crc32c::Value(header + 6, 1 + length);
+      /// 报告校验失败
       if (actual_crc != expected_crc) {
         // Drop the rest of the buffer since "length" itself may have
         // been corrupted and if we trust it, we could find some

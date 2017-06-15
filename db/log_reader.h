@@ -13,6 +13,7 @@
 
 namespace leveldb {
 
+/// 顺序读写文件的抽象
 class SequentialFile;
 
 namespace log {
@@ -41,7 +42,7 @@ class Reader {
   // The Reader will start reading at the first record located at physical
   // position >= initial_offset within the file.
   Reader(SequentialFile* file, Reporter* reporter, bool checksum,
-         uint64_t initial_offset);
+         uint64_t initial_offset); // 初始offset
 
   ~Reader();
 
@@ -50,11 +51,13 @@ class Reader {
   // "*scratch" as temporary storage.  The contents filled in *record
   // will only be valid until the next mutating operation on this
   // reader or the next mutation to *scratch.
+  /// 读取记录，将记录存入record，中间数据可能会利用scratch
   bool ReadRecord(Slice* record, std::string* scratch);
 
   // Returns the physical offset of the last record returned by ReadRecord.
   //
   // Undefined before the first call to ReadRecord.
+  /// 上一条记录的偏移位置
   uint64_t LastRecordOffset();
 
  private:
@@ -68,14 +71,17 @@ class Reader {
   // Offset of the last record returned by ReadRecord.
   uint64_t last_record_offset_;
   // Offset of the first location past the end of buffer_.
+  /// 当前块结尾在文件之中的偏移位置
   uint64_t end_of_buffer_offset_;
 
+  /// 开始查找的起始位置
   // Offset at which to start looking for the first record to return
   uint64_t const initial_offset_;
 
   // True if we are resynchronizing after a seek (initial_offset_ > 0). In
   // particular, a run of kMiddleType and kLastType records can be silently
   // skipped in this mode
+  /// 若initial_offset > 0，则resyncing_为true
   bool resyncing_;
 
   // Extend record types with the following special values
