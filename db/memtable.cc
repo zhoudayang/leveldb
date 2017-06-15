@@ -11,6 +11,7 @@
 
 namespace leveldb {
 
+/// 返回data中存储的key，key的长度根据varint32前缀标识的长度
 static Slice GetLengthPrefixedSlice(const char* data) {
   uint32_t len;
   const char* p = data;
@@ -20,14 +21,16 @@ static Slice GetLengthPrefixedSlice(const char* data) {
 
 MemTable::MemTable(const InternalKeyComparator& cmp)
     : comparator_(cmp),
-      refs_(0),
+      refs_(0), // initial reference count is zero
       table_(comparator_, &arena_) {
 }
 
+/// destructor
 MemTable::~MemTable() {
   assert(refs_ == 0);
 }
 
+/// 内存用量的估计使用的是arena_消耗的内存来估计
 size_t MemTable::ApproximateMemoryUsage() { return arena_.MemoryUsage(); }
 
 int MemTable::KeyComparator::operator()(const char* aptr, const char* bptr)
@@ -35,12 +38,14 @@ int MemTable::KeyComparator::operator()(const char* aptr, const char* bptr)
   // Internal keys are encoded as length-prefixed strings.
   Slice a = GetLengthPrefixedSlice(aptr);
   Slice b = GetLengthPrefixedSlice(bptr);
+  /// compare internal key
   return comparator.Compare(a, b);
 }
 
 // Encode a suitable internal key target for "target" and return it.
 // Uses *scratch as scratch space, and the returned pointer will point
 // into this scratch space.
+/// encode internal key, put length then append user key
 static const char* EncodeKey(std::string* scratch, const Slice& target) {
   scratch->clear();
   PutVarint32(scratch, target.size());
@@ -48,11 +53,13 @@ static const char* EncodeKey(std::string* scratch, const Slice& target) {
   return scratch->data();
 }
 
+/// MemTable Iterator, 实际上转调用的是skip list 的iterator
 class MemTableIterator: public Iterator {
  public:
   explicit MemTableIterator(MemTable::Table* table) : iter_(table) { }
 
   virtual bool Valid() const { return iter_.Valid(); }
+  /// seek要将key 转换为internal key
   virtual void Seek(const Slice& k) { iter_.Seek(EncodeKey(&tmp_, k)); }
   virtual void SeekToFirst() { iter_.SeekToFirst(); }
   virtual void SeekToLast() { iter_.SeekToLast(); }
@@ -61,6 +68,7 @@ class MemTableIterator: public Iterator {
   virtual Slice key() const { return GetLengthPrefixedSlice(iter_.key()); }
   virtual Slice value() const {
     Slice key_slice = GetLengthPrefixedSlice(iter_.key());
+    /// 存储value 也是长度(varint32) + 数据
     return GetLengthPrefixedSlice(key_slice.data() + key_slice.size());
   }
 
@@ -89,7 +97,9 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   //  value bytes  : char[value.size()]
   size_t key_size = key.size();
   size_t val_size = value.size();
+  /// sequence number + value type (8bytes)
   size_t internal_key_size = key_size + 8;
+  ///实际存储: internal key length + internal key + data length + data
   const size_t encoded_len =
       VarintLength(internal_key_size) + internal_key_size +
       VarintLength(val_size) + val_size;
@@ -106,6 +116,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
 }
 
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
+  // key length, key, sequence number + value type
   Slice memkey = key.memtable_key();
   Table::Iterator iter(&table_);
   iter.Seek(memkey.data());
@@ -133,6 +144,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
           value->assign(v.data(), v.size());
           return true;
         }
+        /// 删除的记录，其标记是kTypeDeletion
         case kTypeDeletion:
           *s = Status::NotFound(Slice());
           return true;

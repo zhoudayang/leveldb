@@ -4,6 +4,7 @@ link_libraries(pthread)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x -g -O0")
 
+## platform dependency
 if(APPLE)
 add_compile_options(
         -pthread

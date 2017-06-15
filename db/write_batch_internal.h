@@ -25,6 +25,7 @@ class MemTable;
 
 // WriteBatchInternal provides static methods for manipulating a
 // WriteBatch that we don't want in the public WriteBatch interface.
+/// definition of WriteBatchInternal
 class WriteBatchInternal {
  public:
   // Return the number of entries in the batch.
@@ -40,18 +41,22 @@ class WriteBatchInternal {
   // this batch.
   static void SetSequence(WriteBatch* batch, SequenceNumber seq);
 
+  // return contents of writebatch
   static Slice Contents(const WriteBatch* batch) {
     return Slice(batch->rep_);
   }
 
+  // return content's size
   static size_t ByteSize(const WriteBatch* batch) {
     return batch->rep_.size();
   }
 
+  // set contents to batch
   static void SetContents(WriteBatch* batch, const Slice& contents);
 
   static Status InsertInto(const WriteBatch* batch, MemTable* memtable);
 
+  // append src into dst
   static void Append(WriteBatch* dst, const WriteBatch* src);
 };
 

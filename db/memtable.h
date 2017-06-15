@@ -5,7 +5,6 @@
 #ifndef STORAGE_LEVELDB_DB_MEMTABLE_H_
 #define STORAGE_LEVELDB_DB_MEMTABLE_H_
 
-// 可以看，after skiplist/ dbformat
 #include <string>
 #include "leveldb/db.h"
 #include "db/dbformat.h"
@@ -18,6 +17,8 @@ class InternalKeyComparator;
 class Mutex;
 class MemTableIterator;
 
+// MemTable
+/// 基于引用计数管理
 class MemTable {
  public:
   // MemTables are reference counted.  The initial reference count
@@ -38,6 +39,7 @@ class MemTable {
 
   // Returns an estimate of the number of bytes of data in use by this
   // data structure. It is safe to call when MemTable is being modified.
+  /// 返回对于内存用量的估计
   size_t ApproximateMemoryUsage();
 
   // Return an iterator that yields the contents of the memtable.
@@ -45,12 +47,14 @@ class MemTable {
   // The caller must ensure that the underlying MemTable remains live
   // while the returned iterator is live.  The keys returned by this
   // iterator are internal keys encoded by AppendInternalKey in the
-  // db/format.{h,cc} module.
+  // db/format.{h,cc} .
+  /// 返回iterator，key的类型是 internal key
   Iterator* NewIterator();
 
   // Add an entry into memtable that maps key to value at the
   // specified sequence number and with the specified type.
   // Typically value will be empty if type==kTypeDeletion.
+  /// 将记录添加进入memtable
   void Add(SequenceNumber seq, ValueType type,
            const Slice& key,
            const Slice& value);
@@ -59,6 +63,7 @@ class MemTable {
   // If memtable contains a deletion for key, store a NotFound() error
   // in *status and return true.
   // Else, return false.
+  /// 用于查找，key的类型是LookupKey
   bool Get(const LookupKey& key, std::string* value, Status* s);
 
  private:
@@ -69,14 +74,19 @@ class MemTable {
     explicit KeyComparator(const InternalKeyComparator& c) : comparator(c) { }
     int operator()(const char* a, const char* b) const;
   };
+  // friend class
   friend class MemTableIterator;
   friend class MemTableBackwardIterator;
 
+  /// use KeyComparator as comparator of skiplist
   typedef SkipList<const char*, KeyComparator> Table;
-
+  // comparator
   KeyComparator comparator_;
+  // reference count
   int refs_;
+  /// 内存分配器
   Arena arena_;
+  /// 跳表
   Table table_;
 
   // No copying allowed

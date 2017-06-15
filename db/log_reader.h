@@ -13,7 +13,7 @@
 
 namespace leveldb {
 
-/// 顺序读写文件的抽象
+/// 顺序读写文件的抽象实体
 class SequentialFile;
 
 namespace log {
@@ -27,6 +27,7 @@ class Reader {
 
     // Some corruption was detected.  "size" is the approximate number
     // of bytes dropped due to the corruption.
+    /// 纯虚函数
     virtual void Corruption(size_t bytes, const Status& status) = 0;
   };
 
@@ -51,7 +52,7 @@ class Reader {
   // "*scratch" as temporary storage.  The contents filled in *record
   // will only be valid until the next mutating operation on this
   // reader or the next mutation to *scratch.
-  /// 读取记录，将记录存入record，中间数据可能会利用scratch
+  /// 读取记录，将记录存入record，record的数据存放在scratch之中
   bool ReadRecord(Slice* record, std::string* scratch);
 
   // Returns the physical offset of the last record returned by ReadRecord.
@@ -61,11 +62,11 @@ class Reader {
   uint64_t LastRecordOffset();
 
  private:
-  SequentialFile* const file_;
-  Reporter* const reporter_;
-  bool const checksum_;
-  char* const backing_store_;
-  Slice buffer_;
+  SequentialFile* const file_; // read from file_
+  Reporter* const reporter_; // report error
+  bool const checksum_; // checksum
+  char* const backing_store_; // buffer allocate at stack
+  Slice buffer_; // 读入的数据块
   bool eof_;   // Last Read() indicated EOF by returning < kBlockSize
 
   // Offset of the last record returned by ReadRecord.

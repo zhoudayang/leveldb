@@ -7,7 +7,6 @@
 #ifndef STORAGE_LEVELDB_DB_TABLE_CACHE_H_
 #define STORAGE_LEVELDB_DB_TABLE_CACHE_H_
 
-/// after dbfilename
 #include <string>
 #include <stdint.h>
 #include "db/dbformat.h"
@@ -31,6 +30,7 @@ class TableCache {
   // the returned iterator.  The returned "*tableptr" object is owned by
   // the cache and should not be deleted, and is valid for as long as the
   // returned iterator is live.
+  /// 返回file_number指定文件的迭代器，若tableptr非空，设置*tableptr指向sstable 对象。
   Iterator* NewIterator(const ReadOptions& options,
                         uint64_t file_number,
                         uint64_t file_size,
@@ -38,6 +38,8 @@ class TableCache {
 
   // If a seek to internal key "k" in specified file finds an entry,
   // call (*handle_result)(arg, found_key, found_value).
+  /// 若在指定的文件中找到了internal key -> k, 在其上执行found_result函数
+  /// get k from sstable specified as file_number
   Status Get(const ReadOptions& options,
              uint64_t file_number,
              uint64_t file_size,
@@ -46,13 +48,14 @@ class TableCache {
              void (*handle_result)(void*, const Slice&, const Slice&));
 
   // Evict any entry for the specified file number
+  /// 删除file_number对应的记录
   void Evict(uint64_t file_number);
 
  private:
-  Env* const env_;
-  const std::string dbname_;
-  const Options* options_;
-  Cache* cache_;
+  Env* const env_; // environment
+  const std::string dbname_; // db name
+  const Options* options_; // options
+  Cache* cache_; // cache
 
   Status FindTable(uint64_t file_number, uint64_t file_size, Cache::Handle**);
 };

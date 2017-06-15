@@ -33,6 +33,7 @@ Reader::~Reader() {
   delete[] backing_store_;
 }
 
+///!!! 刚开始读，要读取initial_offset所在的数据块，据此调整，就有此函数
 bool Reader::SkipToInitialBlock() {
   /// initial_offset_ 若大于 block的大小，就取余
   size_t offset_in_block = initial_offset_ % kBlockSize;
@@ -61,8 +62,10 @@ bool Reader::SkipToInitialBlock() {
   return true;
 }
 
+// 读取record
 bool Reader::ReadRecord(Slice* record, std::string* scratch) {
   if (last_record_offset_ < initial_offset_) {
+    /// 调到initial_offset_对应的block
     if (!SkipToInitialBlock()) {
       return false;
     }
@@ -77,11 +80,13 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
 
   Slice fragment;
   while (true) {
+    /// 读取物理record
     const unsigned int record_type = ReadPhysicalRecord(&fragment);
 
     // ReadPhysicalRecord may have only had an empty trailer remaining in its
     // internal buffer. Calculate the offset of the next physical record now
-    // that it has retu rned, properly accounting for its header size.
+    // that it has returned, properly accounting for its header size.
+    /// 物理记录的偏移, 指向结尾位置
     uint64_t physical_record_offset =
         end_of_buffer_offset_ - buffer_.size() - kHeaderSize - fragment.size();
 
@@ -174,7 +179,7 @@ bool Reader::ReadRecord(Slice* record, std::string* scratch) {
           scratch->clear();
         }
         break;
-
+      // 未知的类型
       default: {
         char buf[40];
         snprintf(buf, sizeof(buf), "unknown record type %u", record_type);
@@ -199,7 +204,7 @@ void Reader::ReportCorruption(uint64_t bytes, const char* reason) {
 }
 
 void Reader::ReportDrop(uint64_t bytes, const Status& reason) {
-  if (reporter_ != NULL &&
+  if (reporter_ != NULL && // bytes对应的偏移开始处比initial_offset_还要靠前
       end_of_buffer_offset_ - buffer_.size() - bytes >= initial_offset_) {
     // 报告错误
     reporter_->Corruption(static_cast<size_t>(bytes), reason);
@@ -224,6 +229,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
           eof_ = true;
           return kEof;
         } else if (buffer_.size() < kBlockSize) {
+          /// 读取的数据小于块大小，EOF
           eof_ = true;
         }
         continue;
@@ -246,7 +252,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
     const unsigned int type = header[6];
     // 获取length记录
     const uint32_t length = a | (b << 8);
-    /// 一条记录的长度不可能超出kBlockSize
+    /// 一条记录的长度不可能超出数据块，除非发生错误
     if (kHeaderSize + length > buffer_.size()) {
       size_t drop_size = buffer_.size();
       buffer_.clear();
@@ -260,7 +266,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
       /// 假设writer在写入的过程之中崩溃，不认为是错误
       return kEof;
     }
-    /// Zero type 的长度不可能为0，这是一个错误
+    /// Zero type 的长度不可能为0，这是一个错误, record 有问题
     if (type == kZeroType && length == 0) {
       // Skip zero length record without reporting any drops since
       // such records are produced by the mmap based writing code in
@@ -286,15 +292,17 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
       }
     }
 
+    /// remove 前缀
     buffer_.remove_prefix(kHeaderSize + length);
 
     // Skip physical record that started before initial_offset_
+    /// warning: buffer_ 已经remove了这条记录
     if (end_of_buffer_offset_ - buffer_.size() - kHeaderSize - length <
         initial_offset_) {
       result->clear();
       return kBadRecord;
     }
-
+    /// only return the record only
     *result = Slice(header + kHeaderSize, length);
     return type;
   }

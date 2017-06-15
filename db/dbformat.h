@@ -74,7 +74,7 @@ enum ValueType {
 static const ValueType kValueTypeForSeek = kTypeValue;
 
 // leveldb中每次更新操作都有一个版本。由sequenceNumber来标志，
-// 整个db有一个全局值保存着当前使用到的sequencenumber. SequenceNumber
+// 整个db有一个全局值保存着当前使用到的sequence number. SequenceNumber
 // 在leveldb中有重要的地位，key的排序，compact以及snapshot都依赖他。
 // 存储时，SequenceNumber只占用56bits，ValueType占用8bits,二者共同占用
 // 64bits.
@@ -102,7 +102,7 @@ struct ParsedInternalKey {
 };
 
 // Return the length of the encoding of "key".
-/// key = user_key + value_type
+/// key = user_key + (sequence_number + value_type => 8bytes)
 inline size_t InternalKeyEncodingLength(const ParsedInternalKey& key) {
   return key.user_key.size() + 8;
 }
@@ -183,6 +183,7 @@ class InternalKey {
     AppendInternalKey(&rep_, ParsedInternalKey(user_key, s, t));
   }
 
+  // reset rep_
   void DecodeFrom(const Slice& s) { rep_.assign(s.data(), s.size()); }
 
   Slice Encode() const {

@@ -28,6 +28,7 @@ namespace leveldb {
 
 class Slice;
 
+/// 对数据库一组读写操作的封装
 class WriteBatch {
  public:
   WriteBatch();

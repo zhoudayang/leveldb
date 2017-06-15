@@ -13,7 +13,7 @@
 namespace leveldb {
 
 // Update Makefile if you change these
-///  大版本号
+/// 大版本号
 static const int kMajorVersion = 1;
 /// 小版本号
 static const int kMinorVersion = 20;

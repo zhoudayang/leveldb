@@ -24,6 +24,7 @@
 namespace leveldb {
 
 // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
+/// sequence number + count
 static const size_t kHeader = 12;
 
 WriteBatch::WriteBatch() {
@@ -41,6 +42,7 @@ void WriteBatch::Clear() {
 
 Status WriteBatch::Iterate(Handler* handler) const {
   Slice input(rep_);
+  /// rep_的大小不可能小于kHeader
   if (input.size() < kHeader) {
     return Status::Corruption("malformed WriteBatch (too small)");
   }
@@ -56,6 +58,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
       case kTypeValue:
         if (GetLengthPrefixedSlice(&input, &key) &&
             GetLengthPrefixedSlice(&input, &value)) {
+          /// 向memtable中进行插入
           handler->Put(key, value);
         } else {
           return Status::Corruption("bad WriteBatch Put");
@@ -63,6 +66,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
         break;
       case kTypeDeletion:
         if (GetLengthPrefixedSlice(&input, &key)) {
+          /// 从memtable之中删除
           handler->Delete(key);
         } else {
           return Status::Corruption("bad WriteBatch Delete");
@@ -72,6 +76,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
         return Status::Corruption("unknown WriteBatch tag");
     }
   }
+  /// iterate的数量不一致
   if (found != WriteBatchInternal::Count(this)) {
     return Status::Corruption("WriteBatch has wrong count");
   } else {
@@ -79,32 +84,43 @@ Status WriteBatch::Iterate(Handler* handler) const {
   }
 }
 
+/// 返回rep_中记录的count大小
 int WriteBatchInternal::Count(const WriteBatch* b) {
   return DecodeFixed32(b->rep_.data() + 8);
 }
 
+/// set count
 void WriteBatchInternal::SetCount(WriteBatch* b, int n) {
   EncodeFixed32(&b->rep_[8], n);
 }
 
+/// 返回rep_中记录的sequence number
 SequenceNumber WriteBatchInternal::Sequence(const WriteBatch* b) {
   return SequenceNumber(DecodeFixed64(b->rep_.data()));
 }
 
+/// 设置sequence number
 void WriteBatchInternal::SetSequence(WriteBatch* b, SequenceNumber seq) {
   EncodeFixed64(&b->rep_[0], seq);
 }
 
 void WriteBatch::Put(const Slice& key, const Slice& value) {
+  /// 更新count值
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
+  /// 类型为kTypeValue
   rep_.push_back(static_cast<char>(kTypeValue));
+  /// key
   PutLengthPrefixedSlice(&rep_, key);
+  /// value
   PutLengthPrefixedSlice(&rep_, value);
 }
 
 void WriteBatch::Delete(const Slice& key) {
+  /// 更新Count值
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
+  /// 类型为kTypeDeletion
   rep_.push_back(static_cast<char>(kTypeDeletion));
+  /// 存储key
   PutLengthPrefixedSlice(&rep_, key);
 }
 
@@ -125,6 +141,7 @@ class MemTableInserter : public WriteBatch::Handler {
 };
 }  // namespace
 
+/// 将WriteBatch对应的操作写入memtable之中
 Status WriteBatchInternal::InsertInto(const WriteBatch* b,
                                       MemTable* memtable) {
   MemTableInserter inserter;
@@ -138,6 +155,7 @@ void WriteBatchInternal::SetContents(WriteBatch* b, const Slice& contents) {
   b->rep_.assign(contents.data(), contents.size());
 }
 
+/// 将src对应writebatch的内容和dst合并
 void WriteBatchInternal::Append(WriteBatch* dst, const WriteBatch* src) {
   SetCount(dst, Count(dst) + Count(src));
   assert(src->rep_.size() >= kHeader);

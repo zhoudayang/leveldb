@@ -17,12 +17,14 @@ static uint64_t PackSequenceAndType(uint64_t seq, ValueType t) {
 }
 
 /// 向result之中存入internal key
+/// 首先append userkey, 再存入sequence number 以及 type
 void AppendInternalKey(std::string* result, const ParsedInternalKey& key) {
   result->append(key.user_key.data(), key.user_key.size());
   PutFixed64(result, PackSequenceAndType(key.sequence, key.type));
 }
 
 /// 生成debug 字符串
+/// sequence_number : type + user_key
 std::string ParsedInternalKey::DebugString() const {
   char buf[50];
   snprintf(buf, sizeof(buf), "' @ %llu : %d",
@@ -78,6 +80,7 @@ void InternalKeyComparator::FindShortestSeparator(
   Slice user_start = ExtractUserKey(*start);
   Slice user_limit = ExtractUserKey(limit);
   std::string tmp(user_start.data(), user_start.size());
+  /// 找到比user_start大，比user_limit小的key
   user_comparator_->FindShortestSeparator(&tmp, user_limit);
   if (tmp.size() < user_start.size() &&
       user_comparator_->Compare(user_start, tmp) < 0) {
@@ -93,6 +96,7 @@ void InternalKeyComparator::FindShortestSeparator(
 void InternalKeyComparator::FindShortSuccessor(std::string* key) const {
   Slice user_key = ExtractUserKey(*key);
   std::string tmp(user_key.data(), user_key.size());
+  /// 找到比key大的key, 存于tmp中
   user_comparator_->FindShortSuccessor(&tmp);
   if (tmp.size() < user_key.size() &&
       user_comparator_->Compare(user_key, tmp) < 0) {
@@ -108,6 +112,7 @@ const char* InternalFilterPolicy::Name() const {
   return user_policy_->Name();
 }
 
+/// n 输入的key的个数
 void InternalFilterPolicy::CreateFilter(const Slice* keys, int n,
                                         std::string* dst) const {
   // We rely on the fact that the code in table.cc does not mind us
@@ -127,6 +132,7 @@ bool InternalFilterPolicy::KeyMayMatch(const Slice& key, const Slice& f) const {
 
 LookupKey::LookupKey(const Slice& user_key, SequenceNumber s) {
   size_t usize = user_key.size();
+  /// varint32 + sequence number + value type
   size_t needed = usize + 13;  // A conservative estimate
   char* dst;
   // 空间足够了

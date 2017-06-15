@@ -46,9 +46,11 @@ Status Writer::AddRecord(const Slice& slice) {
   // Fragment the record if necessary and emit it.  Note that if slice
   // is empty, we still want to iterate once to emit a single
   // zero-length record
+  /// 如果slice是空的，我们仍然会产生一个0长度的记录
   Status s;
   bool begin = true;
   do {
+    /// 剩余空间
     const int leftover = kBlockSize - block_offset_;
     assert(leftover >= 0);
     /// 剩余空间不足以写入header，填充全0
@@ -115,9 +117,11 @@ Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
     /// 写入数据部分
     s = dest_->Append(Slice(ptr, n));
     if (s.ok()) {
+      // flush data into file
       s = dest_->Flush();
     }
   }
+  // 更新block_offset_
   block_offset_ += kHeaderSize + n;
   return s;
 }

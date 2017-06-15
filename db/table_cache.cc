@@ -16,6 +16,7 @@ struct TableAndFile {
   Table* table;
 };
 
+/// delete table, file, and TableAndFile object allocated on heap
 static void DeleteEntry(const Slice& key, void* value) {
   TableAndFile* tf = reinterpret_cast<TableAndFile*>(value);
   delete tf->table;
@@ -24,8 +25,11 @@ static void DeleteEntry(const Slice& key, void* value) {
 }
 
 static void UnrefEntry(void* arg1, void* arg2) {
+  /// get cache ptr
   Cache* cache = reinterpret_cast<Cache*>(arg1);
+  /// get cache data
   Cache::Handle* h = reinterpret_cast<Cache::Handle*>(arg2);
+  /// release data to cache
   cache->Release(h);
 }
 
@@ -35,7 +39,7 @@ TableCache::TableCache(const std::string& dbname,
     : env_(options->env),
       dbname_(dbname),
       options_(options),
-      cache_(NewLRUCache(entries)) {
+      cache_(NewLRUCache(entries)) { // create LRUCache
 }
 
 TableCache::~TableCache() {
@@ -45,6 +49,7 @@ TableCache::~TableCache() {
 Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
                              Cache::Handle** handle) {
   Status s;
+  /// use file_number as key
   char buf[sizeof(file_number)];
   EncodeFixed64(buf, file_number);
   Slice key(buf, sizeof(buf));
@@ -53,6 +58,7 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
     std::string fname = TableFileName(dbname_, file_number);
     RandomAccessFile* file = NULL;
     Table* table = NULL;
+    ///首先尝试ldb文件，再尝试sst文件
     s = env_->NewRandomAccessFile(fname, &file);
     if (!s.ok()) {
       std::string old_fname = SSTTableFileName(dbname_, file_number);
@@ -61,6 +67,7 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
       }
     }
     if (s.ok()) {
+      /// 打开sstable
       s = Table::Open(*options_, file, file_size, &table);
     }
 
@@ -70,6 +77,7 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
       // We do not cache error results so that if the error is transient,
       // or somebody repairs the file, we recover automatically.
     } else {
+      /// 记录sstable，file object
       TableAndFile* tf = new TableAndFile;
       tf->file = file;
       tf->table = table;
@@ -95,8 +103,10 @@ Iterator* TableCache::NewIterator(const ReadOptions& options,
 
   Table* table = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
   Iterator* result = table->NewIterator(options);
+  // when destruct, release from cache
   result->RegisterCleanup(&UnrefEntry, cache_, handle);
   if (tableptr != NULL) {
+    /// 记录对应的sstable
     *tableptr = table;
   }
   return result;
@@ -118,6 +128,7 @@ Status TableCache::Get(const ReadOptions& options,
   return s;
 }
 
+/// 从cache中删除file_number对应的记录
 void TableCache::Evict(uint64_t file_number) {
   char buf[sizeof(file_number)];
   EncodeFixed64(buf, file_number);
