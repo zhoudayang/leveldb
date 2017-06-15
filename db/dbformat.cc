@@ -9,17 +9,20 @@
 
 namespace leveldb {
 
+// 将sequence number 和 value type 组合成为 uint64_t
 static uint64_t PackSequenceAndType(uint64_t seq, ValueType t) {
   assert(seq <= kMaxSequenceNumber);
   assert(t <= kValueTypeForSeek);
   return (seq << 8) | t;
 }
 
+/// 向result之中存入internal key
 void AppendInternalKey(std::string* result, const ParsedInternalKey& key) {
   result->append(key.user_key.data(), key.user_key.size());
   PutFixed64(result, PackSequenceAndType(key.sequence, key.type));
 }
 
+/// 生成debug 字符串
 std::string ParsedInternalKey::DebugString() const {
   char buf[50];
   snprintf(buf, sizeof(buf), "' @ %llu : %d",
@@ -34,6 +37,7 @@ std::string ParsedInternalKey::DebugString() const {
 std::string InternalKey::DebugString() const {
   std::string result;
   ParsedInternalKey parsed;
+  // 如果能够parse成功
   if (ParseInternalKey(rep_, &parsed)) {
     result = parsed.DebugString();
   } else {
@@ -43,10 +47,12 @@ std::string InternalKey::DebugString() const {
   return result;
 }
 
+// InternalKeyComparator 的名字
 const char* InternalKeyComparator::Name() const {
   return "leveldb.InternalKeyComparator";
 }
 
+/// 优先按照user key进行升序排序，然后按照sequence number 降序排序
 int InternalKeyComparator::Compare(const Slice& akey, const Slice& bkey) const {
   // Order by:
   //    increasing user key (according to user-supplied comparator)
@@ -111,6 +117,7 @@ void InternalFilterPolicy::CreateFilter(const Slice* keys, int n,
     mkey[i] = ExtractUserKey(keys[i]);
     // TODO(sanjay): Suppress dups?
   }
+  // create filter
   user_policy_->CreateFilter(keys, n, dst);
 }
 
@@ -122,18 +129,25 @@ LookupKey::LookupKey(const Slice& user_key, SequenceNumber s) {
   size_t usize = user_key.size();
   size_t needed = usize + 13;  // A conservative estimate
   char* dst;
+  // 空间足够了
   if (needed <= sizeof(space_)) {
     dst = space_;
   } else {
+    // new 分配空间
     dst = new char[needed];
   }
   start_ = dst;
+  // encode length
   dst = EncodeVarint32(dst, usize + 8);
+  // start_ 指向user key的开始处
   kstart_ = dst;
+  // encode user key
   memcpy(dst, user_key.data(), usize);
   dst += usize;
+  // encode sequence number and type
   EncodeFixed64(dst, PackSequenceAndType(s, kValueTypeForSeek));
   dst += 8;
+  // 指向数据结束处
   end_ = dst;
 }
 

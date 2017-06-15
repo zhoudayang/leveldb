@@ -12,6 +12,7 @@
 
 namespace leveldb {
 
+// pre define of WritableFile class
 class WritableFile;
 
 namespace log {
@@ -33,7 +34,9 @@ class Writer {
   Status AddRecord(const Slice& slice);
 
  private:
+  /// 文件写入的目的地
   WritableFile* dest_;
+  /// 当前文件块内偏移位置
   int block_offset_;       // Current offset in block
 
   // crc32c values for all supported record types.  These are

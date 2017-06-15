@@ -17,6 +17,7 @@ namespace leveldb {
 
 class Env;
 
+/// 枚举：文件类型
 enum FileType {
   kLogFile,
   kDBLockFile,
@@ -30,27 +31,33 @@ enum FileType {
 // Return the name of the log file with the specified number
 // in the db named by "dbname".  The result will be prefixed with
 // "dbname".
+/// log file name maker
 extern std::string LogFileName(const std::string& dbname, uint64_t number);
 
 // Return the name of the sstable with the specified number
 // in the db named by "dbname".  The result will be prefixed with
 // "dbname".
+/// sstable file name maker
 extern std::string TableFileName(const std::string& dbname, uint64_t number);
 
 // Return the legacy file name for an sstable with the specified number
 // in the db named by "dbname". The result will be prefixed with
 // "dbname".
+/// sstable file name maker
 extern std::string SSTTableFileName(const std::string& dbname, uint64_t number);
 
 // Return the name of the descriptor file for the db named by
 // "dbname" and the specified incarnation number.  The result will be
 // prefixed with "dbname".
+
+/// descriptor file name maker
 extern std::string DescriptorFileName(const std::string& dbname,
                                       uint64_t number);
 
 // Return the name of the current file.  This file contains the name
 // of the current manifest file.  The result will be prefixed with
 // "dbname".
+///  name of current file, current file记录了当前的current manifest 文件
 extern std::string CurrentFileName(const std::string& dbname);
 
 // Return the name of the lock file for the db named by
@@ -59,6 +66,7 @@ extern std::string LockFileName(const std::string& dbname);
 
 // Return the name of a temporary file owned by the db named "dbname".
 // The result will be prefixed with "dbname".
+/// 用于更新current
 extern std::string TempFileName(const std::string& dbname, uint64_t number);
 
 // Return the name of the info log file for "dbname".
@@ -73,6 +81,7 @@ extern std::string OldInfoLogFileName(const std::string& dbname);
 extern bool ParseFileName(const std::string& filename,
                           uint64_t* number,
                           FileType* type);
+
 
 // Make the CURRENT file point to the descriptor file with the
 // specified number.

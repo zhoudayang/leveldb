@@ -5,7 +5,6 @@
 #ifndef STORAGE_LEVELDB_DB_DBFORMAT_H_
 #define STORAGE_LEVELDB_DB_DBFORMAT_H_
 
-/// 依赖比较少，可以看
 #include <stdio.h>
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"
@@ -83,24 +82,27 @@ typedef uint64_t SequenceNumber;
 
 // We leave eight bits empty at the bottom so a type and sequence#
 // can be packed together into 64-bits.
+/// 最大的sequence number
 static const SequenceNumber kMaxSequenceNumber =
     ((0x1ull << 56) - 1);
 
 // db 内部操作的key。
-// db内部需要将user key加入元信息(value_type, sequenceNumber)
+// db 内部需要将user key加入元信息(value_type, sequenceNumber)
 // 一起做处理
 struct ParsedInternalKey {
-  Slice user_key;
-  SequenceNumber sequence;
-  ValueType type;
+  Slice user_key; // 用户的key
+  SequenceNumber sequence; // sequence number
+  ValueType type; // value 的类型
 
   ParsedInternalKey() { }  // Intentionally left uninitialized (for speed)
+  // normal constructor
   ParsedInternalKey(const Slice& u, const SequenceNumber& seq, ValueType t)
       : user_key(u), sequence(seq), type(t) { }
   std::string DebugString() const;
 };
 
 // Return the length of the encoding of "key".
+/// key = user_key + value_type
 inline size_t InternalKeyEncodingLength(const ParsedInternalKey& key) {
   return key.user_key.size() + 8;
 }
@@ -117,11 +119,13 @@ extern bool ParseInternalKey(const Slice& internal_key,
                              ParsedInternalKey* result);
 
 // Returns the user key portion of an internal key.
+/// 从internal key之中提取user_key, 跳过最后8bytes
 inline Slice ExtractUserKey(const Slice& internal_key) {
   assert(internal_key.size() >= 8);
   return Slice(internal_key.data(), internal_key.size() - 8);
 }
 
+/// internal_key的最后8bytes是value_type，提取出来返回
 inline ValueType ExtractValueType(const Slice& internal_key) {
   assert(internal_key.size() >= 8);
   const size_t n = internal_key.size();
@@ -134,10 +138,10 @@ inline ValueType ExtractValueType(const Slice& internal_key) {
 // the user key portion and breaks ties by decreasing sequence number.
 // db内部最key排序时使用的比较方法。排序时，首先使用user_comparator比较user-key,
 // 如果user-key相同，则比较SequenceNumber, SequenceNumber大的为小。因为
-// SequnceNumber在db中的全局递增，所以，对于相同的user-key，最新的更新排在前面，在查找
-// 的时候被首先找到。
+// SequnceNumber在db中的全局递增，所以，对于相同的user-key，最新的更新排在前面，在查找的时候被首先找到。
 // InternalKeyComparator中FindShortestSeparator() / FindShortSuccessor() 的实现
-// 仅从传入的内部key的参数，解析出user-key,然后再调用user-comparator的对应接口。
+// 仅从传入的内部key的参数，解析出user-key, 然后再调用user-comparator的对应接口。
+/// user_key小，sequence number更大的排在前面
 class InternalKeyComparator : public Comparator {
  private:
   const Comparator* user_comparator_;
@@ -175,10 +179,12 @@ class InternalKey {
  public:
   InternalKey() { }   // Leave rep_ as empty to indicate it is invalid
   InternalKey(const Slice& user_key, SequenceNumber s, ValueType t) {
+    /// 将user_key, sequence number, value type 组合起来存入rep_
     AppendInternalKey(&rep_, ParsedInternalKey(user_key, s, t));
   }
 
   void DecodeFrom(const Slice& s) { rep_.assign(s.data(), s.size()); }
+
   Slice Encode() const {
     assert(!rep_.empty());
     return rep_;
@@ -196,20 +202,26 @@ class InternalKey {
   std::string DebugString() const;
 };
 
+/// compare two internal key, use Compare function
 inline int InternalKeyComparator::Compare(
     const InternalKey& a, const InternalKey& b) const {
   return Compare(a.Encode(), b.Encode());
 }
 
+/// parse internal key, store in result
 inline bool ParseInternalKey(const Slice& internal_key,
                              ParsedInternalKey* result) {
   const size_t n = internal_key.size();
   if (n < 8) return false;
   uint64_t num = DecodeFixed64(internal_key.data() + n - 8);
   unsigned char c = num & 0xff;
+  // get sequence number
   result->sequence = num >> 8;
+  // get value type
   result->type = static_cast<ValueType>(c);
+  // the remain data is user_key
   result->user_key = Slice(internal_key.data(), n - 8);
+  /// simple assert
   return (c <= static_cast<unsigned char>(kTypeValue));
 }
 
@@ -238,6 +250,7 @@ class LookupKey {
   Slice user_key() const { return Slice(kstart_, end_ - kstart_ - 8); }
 
  private:
+  /// lookup key 内部format如下所示
   // We construct a char array of the form:
   //    klength  varint32               <-- start_
   //    userkey  char[klength]          <-- kstart_
@@ -255,6 +268,7 @@ class LookupKey {
   void operator=(const LookupKey&);
 };
 
+/// destructor of LoopupKey
 inline LookupKey::~LookupKey() {
   if (start_ != space_) delete[] start_;
 }

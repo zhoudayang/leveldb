@@ -16,6 +16,8 @@ namespace leveldb {
 extern Status WriteStringToFileSync(Env* env, const Slice& data,
                                     const std::string& fname);
 
+/// static function, only available in filename.cc
+/// 格式：name + number. + suffix
 static std::string MakeFileName(const std::string& name, uint64_t number,
                                 const char* suffix) {
   char buf[100];
@@ -25,21 +27,25 @@ static std::string MakeFileName(const std::string& name, uint64_t number,
   return name + buf;
 }
 
+/// name + number.log
 std::string LogFileName(const std::string& name, uint64_t number) {
   assert(number > 0);
   return MakeFileName(name, number, "log");
 }
 
+/// name + number.ldb
 std::string TableFileName(const std::string& name, uint64_t number) {
   assert(number > 0);
   return MakeFileName(name, number, "ldb");
 }
 
+/// name + number.sst
 std::string SSTTableFileName(const std::string& name, uint64_t number) {
   assert(number > 0);
   return MakeFileName(name, number, "sst");
 }
 
+/// dbname + /MANIFEST-number
 std::string DescriptorFileName(const std::string& dbname, uint64_t number) {
   assert(number > 0);
   char buf[100];
@@ -48,23 +54,28 @@ std::string DescriptorFileName(const std::string& dbname, uint64_t number) {
   return dbname + buf;
 }
 
+/// dbname + /CURRENT
 std::string CurrentFileName(const std::string& dbname) {
   return dbname + "/CURRENT";
 }
 
+/// dbname + /LOCK
 std::string LockFileName(const std::string& dbname) {
   return dbname + "/LOCK";
 }
 
+/// dbname + number.dbtmp
 std::string TempFileName(const std::string& dbname, uint64_t number) {
   assert(number > 0);
   return MakeFileName(dbname, number, "dbtmp");
 }
 
+/// dbname + "/LOG"
 std::string InfoLogFileName(const std::string& dbname) {
   return dbname + "/LOG";
 }
 
+/// dbname + "/LOG.old"
 // Return the name of the old info log file for "dbname".
 std::string OldInfoLogFileName(const std::string& dbname) {
   return dbname + "/LOG.old";
@@ -78,6 +89,7 @@ std::string OldInfoLogFileName(const std::string& dbname) {
 //    dbname/LOG.old
 //    dbname/MANIFEST-[0-9]+
 //    dbname/[0-9]+.(log|sst|ldb)
+/// fname 指向/之后的字符串
 bool ParseFileName(const std::string& fname,
                    uint64_t* number,
                    FileType* type) {
@@ -124,6 +136,7 @@ bool ParseFileName(const std::string& fname,
   return true;
 }
 
+/// 首先写入tmp文件，成功则改名为Current file name, 否则删除temp文件，返回status
 Status SetCurrentFile(Env* env, const std::string& dbname,
                       uint64_t descriptor_number) {
   // Remove leading "dbname/" and add newline to manifest file name
