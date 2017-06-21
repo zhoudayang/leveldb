@@ -86,6 +86,7 @@ class Mutex {
 
   void Lock();
   void Unlock();
+  /// do nothing
   void AssertHeld() { }
 
  private:

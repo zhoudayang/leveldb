@@ -10,6 +10,7 @@
 namespace leveldb {
 namespace {
 
+/// 此WritableFile 将输出写入到标准输出
 class StdoutPrinter : public WritableFile {
  public:
   virtual Status Append(const Slice& data) {
@@ -21,6 +22,7 @@ class StdoutPrinter : public WritableFile {
   virtual Status Sync() { return Status::OK(); }
 };
 
+/// 将文件dump输出到标准输出
 bool HandleDumpCommand(Env* env, char** files, int num) {
   StdoutPrinter printer;
   bool ok = true;

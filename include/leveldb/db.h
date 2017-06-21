@@ -26,12 +26,14 @@ class WriteBatch;
 // Abstract handle to particular state of a DB.
 // A Snapshot is an immutable object and can therefore be safely
 // accessed from multiple threads without any external synchronization.
+/// DB 特定状态的handle。一个Snapshot是一个不可更改的object，此object是线程安全的。
 class Snapshot {
  protected:
   virtual ~Snapshot();
 };
 
 // A range of keys
+/// keys的取值范围
 struct Range {
   Slice start;          // Included in the range
   Slice limit;          // Not included in the range
@@ -43,6 +45,7 @@ struct Range {
 // A DB is a persistent ordered map from keys to values.
 // A DB is safe for concurrent access from multiple threads without
 // any external synchronization.
+/// DB是一个持久的有序的键值对序列。DB是线程安全的。
 class DB {
  public:
   // Open the database with the specified "name".
@@ -73,6 +76,7 @@ class DB {
   // Apply the specified updates to the database.
   // Returns OK on success, non-OK on failure.
   // Note: consider setting options.sync = true.
+  /// 将updates对应的更新写入到数据库
   virtual Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
 
   // If the database contains an entry for "key" store the
@@ -91,12 +95,14 @@ class DB {
   //
   // Caller should delete the iterator when it is no longer needed.
   // The returned iterator should be deleted before this db is deleted.
+  /// 返回一个在堆上建立的iterator对象，可以借助此iterator来遍历整个数据库
   virtual Iterator* NewIterator(const ReadOptions& options) = 0;
 
   // Return a handle to the current DB state.  Iterators created with
   // this handle will all observe a stable snapshot of the current DB
   // state.  The caller must call ReleaseSnapshot(result) when the
   // snapshot is no longer needed.
+  /// 返回当前DB状态的handle
   virtual const Snapshot* GetSnapshot() = 0;
 
   // Release a previously acquired snapshot.  The caller must not
@@ -152,12 +158,15 @@ class DB {
 
 // Destroy the contents of the specified database.
 // Be very careful using this method.
+/// 删除特定数据库的内容
 Status DestroyDB(const std::string& name, const Options& options);
 
 // If a DB cannot be opened, you may attempt to call this method to
 // resurrect as much of the contents of the database as possible.
 // Some data may be lost, so be careful when calling this function
 // on a database that contains important information.
+/// 如果数据库不能打开，可以尝试使用此方法尽可能恢复数据。一些数据可能会丢失，所以在数据库
+/// 中存储有重要数据时调用此方法需要格外谨慎。
 Status RepairDB(const std::string& dbname, const Options& options);
 
 }  // namespace leveldb

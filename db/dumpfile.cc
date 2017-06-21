@@ -20,6 +20,7 @@ namespace leveldb {
 
 namespace {
 
+/// 猜测输入文件的类型
 bool GuessType(const std::string& fname, FileType* type) {
   size_t pos = fname.rfind('/');
   std::string basename;
@@ -33,6 +34,7 @@ bool GuessType(const std::string& fname, FileType* type) {
 }
 
 // Notified when log reader encounters corruption.
+/// 将崩溃相关信息写入到文件之中
 class CorruptionReporter : public log::Reader::Reporter {
  public:
   WritableFile* dst_;
@@ -213,8 +215,11 @@ Status DumpFile(Env* env, const std::string& fname, WritableFile* dst) {
     return Status::InvalidArgument(fname + ": unknown file type");
   }
   switch (ftype) {
+    /// dump log文件
     case kLogFile:         return DumpLog(env, fname, dst);
+    /// dump manifest文件
     case kDescriptorFile:  return DumpDescriptor(env, fname, dst);
+    /// dump sstable文件
     case kTableFile:       return DumpTable(env, fname, dst);
     default:
       break;

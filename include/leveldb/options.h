@@ -136,6 +136,7 @@ struct Options {
   // initially populating a large database.
   //
   // Default: 2MB
+  /// leveldb将会控制写入文件的大小到2MB，超过2MB将会新生成一个文件
   size_t max_file_size;
 
   // Compress blocks using the specified compression algorithm.  This

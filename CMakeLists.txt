@@ -40,7 +40,7 @@ set(SOURCE_FILES
         db/dbformat.cc
         db/db_impl.cc
         db/db_iter.cc
-        db/dumpfile.cc
+        db/dumpfile
         db/filename.cc
         db/log_reader.cc
         db/log_writer.cc
@@ -91,3 +91,6 @@ add_library(leveldb_test ${TEST_SUPPORT_FILES})
 add_subdirectory(db)
 add_subdirectory(util)
 add_subdirectory(table)
+
+add_executable(test_leveldb test_leveldb.cc)
+target_link_libraries(test_leveldb leveldb)

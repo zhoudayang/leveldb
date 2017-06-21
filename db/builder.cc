@@ -54,6 +54,7 @@ Status BuildTable(const std::string& dbname,
 
     // Finish and check for file errors
     if (s.ok()) {
+      /// 若成功，执行sync
       s = file->Sync();
     }
     if (s.ok()) {
@@ -77,6 +78,7 @@ Status BuildTable(const std::string& dbname,
     s = iter->status();
   }
 
+  // if meta->file_size == 0 or !s.ok(), delete the file
   if (s.ok() && meta->file_size > 0) {
     // Keep it
   } else {

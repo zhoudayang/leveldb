@@ -11,6 +11,7 @@
 
 namespace leveldb {
 
+/// pre define of DBImpl
 class DBImpl;
 
 // Return a new iterator that converts internal keys (yielded by
