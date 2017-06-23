@@ -144,9 +144,12 @@ Status SetCurrentFile(Env* env, const std::string& dbname,
   Slice contents = manifest;
   assert(contents.starts_with(dbname + "/"));
   contents.remove_prefix(dbname.size() + 1);
+  /// 首先写入到tmp文件
   std::string tmp = TempFileName(dbname, descriptor_number);
+  /// 记录当前的manifest文件名称到tmp文件之中
   Status s = WriteStringToFileSync(env, contents.ToString() + "\n", tmp);
   if (s.ok()) {
+    ///重命名tmp文件到current文件
     s = env->RenameFile(tmp, CurrentFileName(dbname));
   }
   if (!s.ok()) {

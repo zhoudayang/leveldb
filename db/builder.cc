@@ -14,6 +14,11 @@
 
 namespace leveldb {
 
+/*
+ a. 生成新的sstable
+ b. 遍历memtable，写入sstable，完成sync
+ c. 记录sstable的FileMetaData信息。将新生成的sstable加入TableCache，作为文件正常的验证
+ */
 Status BuildTable(const std::string& dbname,
                   Env* env,
                   const Options& options,
@@ -24,6 +29,7 @@ Status BuildTable(const std::string& dbname,
   meta->file_size = 0;
   iter->SeekToFirst();
 
+  ///  获取sstable的名称
   std::string fname = TableFileName(dbname, meta->number);
   if (iter->Valid()) {
     WritableFile* file;
@@ -37,6 +43,7 @@ Status BuildTable(const std::string& dbname,
     for (; iter->Valid(); iter->Next()) {
       Slice key = iter->key();
       meta->largest.DecodeFrom(key);
+      /// 添加key和value
       builder->Add(key, iter->value());
     }
 
@@ -63,6 +70,7 @@ Status BuildTable(const std::string& dbname,
     delete file;
     file = NULL;
 
+    // 测试创建Iterator是否成功
     if (s.ok()) {
       // Verify that the table is usable
       Iterator* it = table_cache->NewIterator(ReadOptions(),

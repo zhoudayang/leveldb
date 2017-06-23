@@ -30,6 +30,7 @@ class VersionEdit {
   VersionEdit() { Clear(); }
   ~VersionEdit() { }
 
+  /// 清空记录
   void Clear();
 
   // set comparator name
@@ -42,6 +43,7 @@ class VersionEdit {
     has_log_number_ = true;
     log_number_ = num;
   }
+
   // set prev log number
   void SetPrevLogNumber(uint64_t num) {
     has_prev_log_number_ = true;
@@ -58,6 +60,7 @@ class VersionEdit {
     last_sequence_ = seq;
   }
   // set compact pointer
+  /// 记录compaction所在的level和结束的key
   void SetCompactPointer(int level, const InternalKey& key) {
     compact_pointers_.push_back(std::make_pair(level, key));
   }
@@ -77,6 +80,7 @@ class VersionEdit {
     f.file_size = file_size;
     f.smallest = smallest;
     f.largest = largest;
+    /// 向指定level添加文件记录，记录在manifest之中
     new_files_.push_back(std::make_pair(level, f));
   }
 

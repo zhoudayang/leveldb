@@ -20,6 +20,7 @@ struct TableAndFile {
 static void DeleteEntry(const Slice& key, void* value) {
   TableAndFile* tf = reinterpret_cast<TableAndFile*>(value);
   delete tf->table;
+  /// 此处关闭了打开的文件
   delete tf->file;
   delete tf;
 }
@@ -81,6 +82,8 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
       TableAndFile* tf = new TableAndFile;
       tf->file = file;
       tf->table = table;
+      /// 占用cache_的空间为1，表示一条记录。
+      /// 通过cache_控制打开的文件的数目
       *handle = cache_->Insert(key, tf, 1, &DeleteEntry);
     }
   }

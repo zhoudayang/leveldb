@@ -57,7 +57,7 @@ extern int FindFile(const InternalKeyComparator& icmp,
 /// 若files中的一些文件和[*smallest,*largest]指定的user key区间重合就返回true
 extern bool SomeFileOverlapsRange(
     const InternalKeyComparator& icmp,
-    bool disjoint_sorted_files,
+    bool disjoint_sorted_files, // files重合了吗？
     const std::vector<FileMetaData*>& files,
     const Slice* smallest_user_key,
     const Slice* largest_user_key);
@@ -268,6 +268,7 @@ class VersionSet {
   // Arrange to reuse "file_number" unless a newer file number has
   // already been allocated.
   // REQUIRES: "file_number" was returned by a call to NewFileNumber().
+  /// 已经ReuseFileNumber, 故而next_file_number_可以减去1
   void ReuseFileNumber(uint64_t file_number) {
     if (next_file_number_ == file_number + 1) {
       next_file_number_ = file_number;
@@ -294,7 +295,7 @@ class VersionSet {
   }
 
   // Mark the specified file number as used.
-  /// 标记number指定的文件已经使用
+  /// 标记number指定的文件已经使用, 并据此更新next_file_number_
   void MarkFileNumberUsed(uint64_t number);
 
   // Return the current log file number.
@@ -310,17 +311,14 @@ class VersionSet {
   // Returns NULL if there is no compaction to be done.
   // Otherwise returns a pointer to a heap-allocated object that
   // describes the compaction.  Caller should delete the result.
-  /// 对level和inputs执行compaction操作, 返回对应的Compaction对象指针
-  /// 调用者负责析构
+  /// 选取文件进行Compaction操作
   Compaction* PickCompaction();
 
   // Return a compaction object for compacting the range [begin,end] in
   // the specified level.  Returns NULL if there is nothing in that
   // level that overlaps the specified range.  Caller should delete
   // the result.
-  /// 对于范围在[begin,end]的指定level的文件进行compaction，返回对应的compaction对象指针
-  /// 若对应level的指定范围没有发生重叠，则返回NULL
-  /// 调用者负责析构
+  /// 选取指定level上指定范围的文件进行Compaction操作
   Compaction* CompactRange(
       int level,
       const InternalKey* begin,
@@ -328,7 +326,7 @@ class VersionSet {
 
   // Return the maximum overlapping data (in bytes) at next level for any
   // file at a level >= 1.
-  /// 返回某level最大的overlapping的数据大小
+  /// 返回某level和上级文件最大的overlapping的数据大小 (level >= 1)
   int64_t MaxNextLevelOverlappingBytes();
 
   // Create an iterator that reads over the compaction inputs for "*c".
@@ -357,9 +355,11 @@ class VersionSet {
 
   // Return a human-readable short (single-line) summary of the number
   // of files per level.  Uses *scratch as backing store.
+  /// 用于LevelSummary
   struct LevelSummaryStorage {
     char buffer[100];
   };
+
   /// 返回每个level上文件数目的总结
   /// 使用sratch用于backing store
   const char* LevelSummary(LevelSummaryStorage* scratch) const;
@@ -394,7 +394,7 @@ class VersionSet {
   Env* const env_;
   const std::string dbname_; // db name
   const Options* const options_; // options
-  TableCache* const table_cache_; // table cache
+  TableCache* const table_cache_; // sstable cache
   const InternalKeyComparator icmp_; // InternalKey comparator
   uint64_t next_file_number_; // 下一个file number
   uint64_t manifest_file_number_; // number of manifest file
@@ -459,7 +459,8 @@ class Compaction {
   // Return the ith input file at "level()+which" ("which" must be 0 or 1).
   FileMetaData* input(int which, int i) const { return inputs_[which][i]; }
 
-  /// 此次compaction操作中文件的最大大小
+  /// 控制compaction操作过程之中产生的sstable文件的大小，默认控制在2MB
+  /// 此值限制了sstable的最大大小
   // Maximum size of files to build during this compaction.
   uint64_t MaxOutputFileSize() const { return max_output_file_size_; }
 
@@ -475,7 +476,7 @@ class Compaction {
   // Returns true if the information we have available guarantees that
   // the compaction is producing data in "level+1" for which no data exists
   // in levels greater than "level+1".
-  /// 若通过现在掌握的信息能够确保compaction操作在level+1产生的数据比现有的数据更大
+  /// 若通过现在掌握的信息能够确保compaction操作最终生成的在level+1上的sstable，比现有>=level+1的数据都大
   bool IsBaseLevelForKey(const Slice& user_key);
 
   // Returns true iff we should stop building the current output

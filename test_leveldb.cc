@@ -13,20 +13,16 @@ int main()
   assert(status.ok());
   db_ptr.reset(dbptr);
 
-  for(int i = 0; i < 10; ++ i)
+  db_ptr->Put(leveldb::WriteOptions(), "a", "a");
+  db_ptr->Put(leveldb::WriteOptions(), "b", "b");
+  db_ptr->Put(leveldb::WriteOptions(), "c", "c");
+
+  std::string value;
+  auto s = db_ptr->Get(leveldb::ReadOptions(), "a", &value);
+  if(s.ok())
   {
-    db_ptr->Put(leveldb::WriteOptions(), std::to_string(i), std::to_string(i));
+    cout << "got it" << endl;
   }
 
-  std::unique_ptr<leveldb::Iterator> iterator(db_ptr->NewIterator(leveldb::ReadOptions()));
-  if(iterator)
-  {
-    iterator->SeekToFirst();
-    while(iterator->Valid())
-    {
-      cout << iterator->key().ToString() << " : " << iterator->value().ToString() << endl;
-      iterator->Next();
-    }
-  }
-
+  return 0;
 }

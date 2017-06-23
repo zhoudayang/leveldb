@@ -54,6 +54,7 @@ class SnapshotList {
     return s;
   }
 
+  /// 从list中删除s所对应的节点
   void Delete(const SnapshotImpl* s) {
     assert(s->list_ == this);
     s->prev_->next_ = s->next_;

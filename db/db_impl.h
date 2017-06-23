@@ -122,6 +122,7 @@ class DBImpl : public DB {
   /// 记录后台错误
   void RecordBackgroundError(const Status& s);
 
+  /// compaction操作相关
   void MaybeScheduleCompaction() EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   static void BGWork(void* db);
   void BackgroundCall();
@@ -171,6 +172,7 @@ class DBImpl : public DB {
 
   // Set of table files to protect from deletion because they are
   // part of ongoing compactions.
+  /// 当前正在输出的文件
   std::set<uint64_t> pending_outputs_;
 
   // Has a background compaction been scheduled or is running?
@@ -202,6 +204,7 @@ class DBImpl : public DB {
 
     CompactionStats() : micros(0), bytes_read(0), bytes_written(0) { }
 
+    /// 将另一个CompactionStats对象对应的统计信息合并加起来
     void Add(const CompactionStats& c) {
       this->micros += c.micros;
       this->bytes_read += c.bytes_read;

@@ -55,6 +55,7 @@ const char* InternalKeyComparator::Name() const {
 }
 
 /// 优先按照user key进行升序排序，然后按照sequence number 降序排序
+/// node->key key
 int InternalKeyComparator::Compare(const Slice& akey, const Slice& bkey) const {
   // Order by:
   //    increasing user key (according to user-supplied comparator)

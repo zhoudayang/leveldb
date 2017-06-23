@@ -255,7 +255,7 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k,
     // 使用filter进行过滤
     if (filter != NULL &&
         handle.DecodeFrom(&handle_value).ok() &&
-        !filter->KeyMayMatch(handle.offset(), k)) {
+        !filter->KeyMayMatch(handle.offset(), k)) { // filter过滤不通过
       // Not found
     } else {
       Iterator* block_iter = BlockReader(this, options, iiter->value());

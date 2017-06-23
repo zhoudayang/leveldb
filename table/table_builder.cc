@@ -23,13 +23,13 @@ struct TableBuilder::Rep {
   WritableFile* file;
   uint64_t offset;
   Status status;
-  BlockBuilder data_block;
-  BlockBuilder index_block;
-  std::string last_key;
-  int64_t num_entries;
-  bool closed;          // Either Finish() or Abandon() has been called.
+  BlockBuilder data_block; // 数据块
+  BlockBuilder index_block; // 索引块
+  std::string last_key; // 前一个key
+  int64_t num_entries; // 记录的数目
+  bool closed;         // 是否已经结束 // Either Finish() or Abandon() has been called.
   // FilterBlock
-  FilterBlockBuilder* filter_block;
+  FilterBlockBuilder* filter_block; // 过滤块
 
   // We do not emit the index entry for a block until we have seen the
   // first key for the next data block.  This allows us to use shorter

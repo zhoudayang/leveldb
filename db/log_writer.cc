@@ -59,6 +59,7 @@ Status Writer::AddRecord(const Slice& slice) {
       if (leftover > 0) {
         // Fill the trailer (literal below relies on kHeaderSize being 7)
         assert(kHeaderSize == 7);
+        /// 块剩余的空间填充全0
         dest_->Append(Slice("\x00\x00\x00\x00\x00\x00", leftover));
       }
       block_offset_ = 0;
@@ -99,6 +100,7 @@ Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
 
   // Format the header
   char buf[kHeaderSize];
+  /// 存储记录的长度
   /// 末尾1byte
   buf[4] = static_cast<char>(n & 0xff);
   /// 开头处1byte
@@ -118,6 +120,7 @@ Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
     s = dest_->Append(Slice(ptr, n));
     if (s.ok()) {
       // flush data into file
+      /// 保证数据落盘
       s = dest_->Flush();
     }
   }

@@ -59,6 +59,7 @@ class SkipList {
 
   // Iteration over the contents of a skip list
   // 此iterator的定义和include/leveldb/iterator头文件中定义的一样
+  /// 内部类Iterator
   class Iterator {
    public:
     // Initialize an iterator over the specified list.
@@ -298,6 +299,8 @@ int SkipList<Key,Comparator>::RandomHeight() {
 template<typename Key, class Comparator>
 bool SkipList<Key,Comparator>::KeyIsAfterNode(const Key& key, Node* n) const {
   // NULL n is considered infinite
+  /// 此处，memtable实际使用时，若key的sequence number更大，user key一样，会返回false，因为compare_返回大于0的值
+  /// node->key < key
   return (n != NULL) && (compare_(n->key, key) < 0);
 }
 
@@ -385,7 +388,7 @@ SkipList<Key,Comparator>::SkipList(Comparator cmp, Arena* arena)
       arena_(arena),
       head_(NewNode(0 /* any key will do */, kMaxHeight)),
       max_height_(reinterpret_cast<void*>(1)), // 新建skiplist的深度
-      rnd_(0xdeadbeef) {
+      rnd_(0xdeadbeef) { /// 指定random的seed值
   // head结点的next_数组每一项都为NULL，对应当前skiplist为空
   for (int i = 0; i < kMaxHeight; i++) {
     head_->SetNext(i, NULL);
