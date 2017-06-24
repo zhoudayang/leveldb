@@ -80,6 +80,9 @@ class DBIter: public Iterator {
   }
 
   virtual void Next();
+  // 反向遍历时，对于一个 key，最后遍历到的才是其最终状态，所以必须遍历到该 key 的前一 个，
+  // 才能确定该 key 已经全部处理过，并获得其最终状态。这时 iter_并不位于当前 key 的 位置，
+  // 所以需要 saved_key_/save_value_来保存当前的 key/value。
   virtual void Prev();
   virtual void Seek(const Slice& target);
   virtual void SeekToFirst();
@@ -94,6 +97,7 @@ class DBIter: public Iterator {
     dst->assign(k.data(), k.size());
   }
 
+  /// 清空保留的value
   inline void ClearSavedValue() {
     if (saved_value_.capacity() > 1048576) {
       std::string empty;
@@ -114,6 +118,8 @@ class DBIter: public Iterator {
   SequenceNumber const sequence_;
 
   Status status_;
+  // 遍历时需要跳过相同和删除的 key，反向遍历为了处理这个逻辑，操作完成时， // iter_定位到的会是当前 key 的前一个位置，所以需要保存过程中
+  // 获得的当前 key/value。
   std::string saved_key_;     // == current key when direction_==kReverse
   std::string saved_value_;   // == current raw value when direction_==kReverse
   Direction direction_;
@@ -132,7 +138,9 @@ inline bool DBIter::ParseKey(ParsedInternalKey* ikey) {
   ssize_t n = k.size() + iter_->value().size();
   bytes_counter_ -= n;
   while (bytes_counter_ < 0) {
+    /// 模拟进行了一些数据读取
     bytes_counter_ += RandomPeriod();
+    /// 更新allowed_seeks
     db_->RecordReadSample(k);
   }
   if (!ParseInternalKey(k, ikey)) {
@@ -151,11 +159,13 @@ void DBIter::Next() {
     // iter_ is pointing just before the entries for this->key(),
     // so advance into the range of entries for this->key() and then
     // use the normal skipping code below.
+    /// 已经移动到iterator的末尾
     if (!iter_->Valid()) {
       iter_->SeekToFirst();
     } else {
       iter_->Next();
     }
+    /// 发生错误
     if (!iter_->Valid()) {
       valid_ = false;
       saved_key_.clear();
@@ -164,9 +174,10 @@ void DBIter::Next() {
     // saved_key_ already contains the key to skip past.
   } else {
     // Store in saved_key_ the current key so we skip it below.
+    /// 保存当前的key
     SaveKey(ExtractUserKey(iter_->key()), &saved_key_);
   }
-
+  /// 找到比当前key小的那条记录
   FindNextUserEntry(true, &saved_key_);
 }
 
@@ -185,11 +196,12 @@ void DBIter::FindNextUserEntry(bool skipping, std::string* skip) {
           skipping = true;
           break;
         case kTypeValue:
-          /// 和前一个key相同，并且是skipping
+          /// 小于等于前面的key，并且是skipping
           if (skipping &&
               user_comparator_->Compare(ikey.user_key, *skip) <= 0) {
             // Entry hidden
           } else {
+            /// got it
             valid_ = true;
             saved_key_.clear();
             return;
@@ -219,6 +231,7 @@ void DBIter::Prev() {
         ClearSavedValue();
         return;
       }
+      /// 找到了更小的key
       if (user_comparator_->Compare(ExtractUserKey(iter_->key()),
                                     saved_key_) < 0) {
         break;
@@ -226,7 +239,6 @@ void DBIter::Prev() {
     }
     direction_ = kReverse;
   }
-
   FindPrevUserEntry();
 }
 

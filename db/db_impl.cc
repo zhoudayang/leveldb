@@ -871,6 +871,7 @@ void DBImpl::BackgroundCompaction() {
       // We only compacted part of the requested range.  Update *m
       // to the range that is left to be compacted.
       m->tmp_storage = manual_end;
+      /// 记录下一次compaction的开始位置
       m->begin = &m->tmp_storage;
     }
     manual_compaction_ = NULL;
