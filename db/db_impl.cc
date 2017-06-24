@@ -1751,6 +1751,7 @@ Status DestroyDB(const std::string& dbname, const Options& options) {
   std::vector<std::string> filenames;
   // Ignore error in case directory does not exist
   env->GetChildren(dbname, &filenames);
+  /// 没有文件，直接返回
   if (filenames.empty()) {
     return Status::OK();
   }
@@ -1762,6 +1763,7 @@ Status DestroyDB(const std::string& dbname, const Options& options) {
     uint64_t number;
     FileType type;
     for (size_t i = 0; i < filenames.size(); i++) {
+      /// 清除非lock file
       if (ParseFileName(filenames[i], &number, &type) &&
           type != kDBLockFile) {  // Lock file will be deleted at end
         Status del = env->DeleteFile(dbname + "/" + filenames[i]);

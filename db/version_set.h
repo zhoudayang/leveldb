@@ -58,7 +58,7 @@ extern int FindFile(const InternalKeyComparator& icmp,
 extern bool SomeFileOverlapsRange(
     const InternalKeyComparator& icmp,
     bool disjoint_sorted_files, // files重合了吗？
-    const std::vector<FileMetaData*>& files,
+    const std::vector<FileMetaData*>& files, // 输入的是同一个level的文件
     const Slice* smallest_user_key,
     const Slice* largest_user_key);
 
@@ -476,7 +476,7 @@ class Compaction {
   // Returns true if the information we have available guarantees that
   // the compaction is producing data in "level+1" for which no data exists
   // in levels greater than "level+1".
-  /// 若通过现在掌握的信息能够确保compaction操作最终生成的在level+1上的sstable，比现有>=level+1的数据都大
+  /// 若通过现在掌握的信息能够确保compaction操作最终生成的在level+1上的sstable，比现有>level+1的数据都大
   bool IsBaseLevelForKey(const Slice& user_key);
 
   // Returns true iff we should stop building the current output

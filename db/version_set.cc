@@ -281,8 +281,8 @@ static Iterator* GetFileIterator(void* arg,
   } else {
     /// 返回file_number和file_size指定的sstable文件的iterator
     return cache->NewIterator(options,
-                              DecodeFixed64(file_value.data()),
-                              DecodeFixed64(file_value.data() + 8));
+                              DecodeFixed64(file_value.data()), // file number
+                              DecodeFixed64(file_value.data() + 8)); // file size
   }
 }
 
@@ -531,6 +531,7 @@ bool Version::UpdateStats(const GetStats& stats) {
       /// 设置file_to_compact_和file_to_compact_level_
       /// 记录要进行compact处理的文件以及对应的level
       file_to_compact_ = f;
+      /// 需要进行compaction的level
       file_to_compact_level_ = stats.seek_file_level;
       return true;
     }
@@ -558,6 +559,7 @@ bool Version::RecordReadSample(Slice internal_key) {
     static bool Match(void* arg, int level, FileMetaData* f) {
       State* state = reinterpret_cast<State*>(arg);
       state->matches++;
+      /// 只记住第一次match时所对应的文件和level
       if (state->matches == 1) {
         // Remember first match.
         state->stats.seek_file = f;
@@ -677,6 +679,7 @@ void Version::GetOverlappingInputs(
     } else if (end != NULL && user_cmp->Compare(file_start, user_end) > 0) {
       // "f" is completely after specified range; skip it
     } else {
+      /// 所有重叠的文件都加入inputs之中
       inputs->push_back(f);
       if (level == 0) {
         /// 下述操作的原因在于level-0对应的文件可能会互相之间都有重叠
@@ -833,6 +836,7 @@ class VersionSet::Builder {
     }
 
     // Add new files
+    /// 添加新文件时，根据其大小赋值allowed_seeks
     for (size_t i = 0; i < edit->new_files_.size(); i++) {
       const int level = edit->new_files_[i].first;
       FileMetaData* f = new FileMetaData(edit->new_files_[i].second);
@@ -1309,9 +1313,11 @@ Status VersionSet::WriteSnapshot(log::Writer* log) {
 
   // Save metadata
   VersionEdit edit;
+  /// 写入comparator的名称
   edit.SetComparatorName(icmp_.user_comparator()->Name());
 
   // Save compaction pointers
+  /// 写入compact_pointer_
   for (int level = 0; level < config::kNumLevels; level++) {
     if (!compact_pointer_[level].empty()) {
       InternalKey key;
@@ -1321,6 +1327,7 @@ Status VersionSet::WriteSnapshot(log::Writer* log) {
   }
 
   // Save files
+  /// 写入当前各level的文件
   for (int level = 0; level < config::kNumLevels; level++) {
     const std::vector<FileMetaData*>& files = current_->files_[level];
     for (size_t i = 0; i < files.size(); i++) {
@@ -1600,7 +1607,7 @@ void VersionSet::SetupOtherInputs(Compaction* c) {
 
   // See if we can grow the number of inputs in "level" without
   // changing the number of "level+1" files we pick up.
-  /// 得到准确的涉及到compact的所有文件
+  /// 尽可能扩充选中的文件数量，又做到不违背大于1的level内部文件之间发生重叠
   if (!c->inputs_[1].empty()) {
     std::vector<FileMetaData*> expanded0;
     /// 获取更新范围之后的level上重叠的文件列表
@@ -1613,6 +1620,7 @@ void VersionSet::SetupOtherInputs(Compaction* c) {
         inputs1_size + expanded0_size <
             ExpandedCompactionByteSizeLimit(options_)) { /// 限制compaction操作涉及的文件大小
       InternalKey new_start, new_limit;
+      /// 获取expanded之后level文件的取值范围
       GetRange(expanded0, &new_start, &new_limit);
       std::vector<FileMetaData*> expanded1;
       /// 获取level+1上和[new_start,new_limit]重叠的文件列表
@@ -1631,6 +1639,7 @@ void VersionSet::SetupOtherInputs(Compaction* c) {
             long(expanded0_size), long(inputs1_size));
         smallest = new_start;
         largest = new_limit;
+        /// 记录更新之后输入的文件
         c->inputs_[0] = expanded0;
         c->inputs_[1] = expanded1;
         /// 记录更新之后的level和level+1上的总区间范围到[all_start,all_limit]
@@ -1643,7 +1652,7 @@ void VersionSet::SetupOtherInputs(Compaction* c) {
   // (parent == level+1; grandparent == level+2)
   /// 记录grandparents_在[all_start, all_limit]范围内的重叠的文件
   if (level + 2 < config::kNumLevels) {
-    /// 和[all_start,all_limit]区间重叠的grand level 文件的列表存入grandparents_之中
+    /// 和[all_start,all_limit]区间重叠的grandparent level 文件的列表存入grandparents_之中
     current_->GetOverlappingInputs(level + 2, &all_start, &all_limit,
                                    &c->grandparents_);
   }

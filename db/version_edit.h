@@ -38,6 +38,7 @@ class VersionEdit {
     has_comparator_ = true;
     comparator_ = name.ToString();
   }
+  
   // set log number
   void SetLogNumber(uint64_t num) {
     has_log_number_ = true;
@@ -49,16 +50,19 @@ class VersionEdit {
     has_prev_log_number_ = true;
     prev_log_number_ = num;
   }
+  
   // set next file number
   void SetNextFile(uint64_t num) {
     has_next_file_number_ = true;
     next_file_number_ = num;
   }
+  
   // set last sequence
   void SetLastSequence(SequenceNumber seq) {
     has_last_sequence_ = true;
     last_sequence_ = seq;
   }
+  
   // set compact pointer
   /// 记录compaction所在的level和结束的key
   void SetCompactPointer(int level, const InternalKey& key) {
