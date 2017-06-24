@@ -5,3 +5,7 @@
 3. 使用CMakeLists.txt管理，方便基于CLion阅读源代码
 4. 支持mac
 5. 基于leveldb 1.2
+
+## 推荐的专栏
+1. [bean-li](http://bean-li.github.io/tags/#leveldb)
+2. [luodw](http://luodw.cc/categories/leveldb/)
