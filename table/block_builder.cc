@@ -30,25 +30,28 @@
 
 #include "table/block_builder.h"
 
-#include <algorithm>
 #include <assert.h>
 #include "leveldb/comparator.h"
 #include "leveldb/table_builder.h"
 #include "util/coding.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-BlockBuilder::BlockBuilder(const Options* options)
-    : options_(options),
-      restarts_(),
-      counter_(0), // 从上一次restart以来加入的entry的数量
-      finished_(false) {
+BlockBuilder::BlockBuilder(const Options *options)
+    :
+    options_(options),
+    restarts_(),
+    counter_(0), // 从上一次restart以来加入的entry的数量
+    finished_(false)
+{
   assert(options->block_restart_interval >= 1);
   // 第一个restart数组的元素指向的offset是0
   restarts_.push_back(0);       // First restart point is at offset 0
 }
 
-void BlockBuilder::Reset() {
+void BlockBuilder::Reset()
+{
   buffer_.clear();
   restarts_.clear();
   restarts_.push_back(0);       // First restart point is at offset 0
@@ -58,16 +61,19 @@ void BlockBuilder::Reset() {
 }
 
 // 返回data block 占用的空间的估计
-size_t BlockBuilder::CurrentSizeEstimate() const {
+size_t BlockBuilder::CurrentSizeEstimate() const
+{
   return (buffer_.size() +                        // Raw data buffer
-          restarts_.size() * sizeof(uint32_t) +   // Restart array
-          sizeof(uint32_t));                      // Restart array length
+      restarts_.size() * sizeof(uint32_t) +   // Restart array
+      sizeof(uint32_t));                      // Restart array length
 }
 
 // 调用finish，设置restarts数组和restarts数组的个数，返回此data block
-Slice BlockBuilder::Finish() {
+Slice BlockBuilder::Finish()
+{
   // Append restart array
-  for (size_t i = 0; i < restarts_.size(); i++) {
+  for (size_t i = 0; i < restarts_.size(); i++)
+  {
     PutFixed32(&buffer_, restarts_[i]);
   }
   // put restarts_.size()
@@ -76,22 +82,27 @@ Slice BlockBuilder::Finish() {
   return Slice(buffer_);
 }
 
-void BlockBuilder::Add(const Slice& key, const Slice& value) {
+void BlockBuilder::Add(const Slice &key, const Slice &value)
+{
   Slice last_key_piece(last_key_);
   assert(!finished_);
   assert(counter_ <= options_->block_restart_interval);
   // 要求key比last_key要大
   assert(buffer_.empty() // No values yet?
-         || options_->comparator->Compare(key, last_key_piece) > 0);
+             || options_->comparator->Compare(key, last_key_piece) > 0);
   size_t shared = 0;
-  if (counter_ < options_->block_restart_interval) {
+  if (counter_ < options_->block_restart_interval)
+  {
     // See how much sharing to do with previous string
     const size_t min_length = std::min(last_key_piece.size(), key.size());
     // 计算shared 的key的长度
-    while ((shared < min_length) && (last_key_piece[shared] == key[shared])) {
+    while ((shared < min_length) && (last_key_piece[shared] == key[shared]))
+    {
       shared++;
     }
-  } else {
+  }
+  else
+  {
     // Restart compression
     restarts_.push_back(buffer_.size());
     counter_ = 0;

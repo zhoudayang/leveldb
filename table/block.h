@@ -11,7 +11,8 @@
 
 // data block iterator implementation
 // complete: 2017-06-10
-namespace leveldb {
+namespace leveldb
+{
 /*
 // data, cachable, heap_allocated
 // block struct
@@ -26,28 +27,29 @@ struct BlockContents {
 struct BlockContents;
 class Comparator;
 
-class Block {
+class Block
+{
  public:
   // Initialize the block with the specified contents.
-  explicit Block(const BlockContents& contents);
+  explicit Block(const BlockContents &contents);
 
   ~Block();
 
   size_t size() const { return size_; }
   // Return new Iterator of given comparator
-  Iterator* NewIterator(const Comparator* comparator);
+  Iterator *NewIterator(const Comparator *comparator);
 
  private:
   uint32_t NumRestarts() const;
 
-  const char* data_; // 指向data block 开始处
+  const char *data_; // 指向data block 开始处
   size_t size_;   // data block的大小
   uint32_t restart_offset_;     // Offset in data_ of restart array
   bool owned_;                  // Block owns data_[], if own need to call free when destruction
 
   // No copying allowed
-  Block(const Block&);
-  void operator=(const Block&);
+  Block(const Block &);
+  void operator=(const Block &);
   // 内部实现实际定义在Iter中
   class Iter;
 };

@@ -3,34 +3,38 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "db/dbformat.h"
-#include "util/logging.h"
 #include "util/testharness.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-static std::string IKey(const std::string& user_key,
+static std::string IKey(const std::string &user_key,
                         uint64_t seq,
-                        ValueType vt) {
+                        ValueType vt)
+{
   std::string encoded;
   AppendInternalKey(&encoded, ParsedInternalKey(user_key, seq, vt));
   return encoded;
 }
 
-static std::string Shorten(const std::string& s, const std::string& l) {
+static std::string Shorten(const std::string &s, const std::string &l)
+{
   std::string result = s;
   InternalKeyComparator(BytewiseComparator()).FindShortestSeparator(&result, l);
   return result;
 }
 
-static std::string ShortSuccessor(const std::string& s) {
+static std::string ShortSuccessor(const std::string &s)
+{
   std::string result = s;
   InternalKeyComparator(BytewiseComparator()).FindShortSuccessor(&result);
   return result;
 }
 
-static void TestKey(const std::string& key,
+static void TestKey(const std::string &key,
                     uint64_t seq,
-                    ValueType vt) {
+                    ValueType vt)
+{
   std::string encoded = IKey(key, seq, vt);
 
   Slice in(encoded);
@@ -44,25 +48,31 @@ static void TestKey(const std::string& key,
   ASSERT_TRUE(!ParseInternalKey(Slice("bar"), &decoded));
 }
 
-class FormatTest { };
+class FormatTest
+{
+};
 
-TEST(FormatTest, InternalKey_EncodeDecode) {
-  const char* keys[] = { "", "k", "hello", "longggggggggggggggggggggg" };
+TEST(FormatTest, InternalKey_EncodeDecode)
+{
+  const char *keys[] = {"", "k", "hello", "longggggggggggggggggggggg"};
   const uint64_t seq[] = {
-    1, 2, 3,
-    (1ull << 8) - 1, 1ull << 8, (1ull << 8) + 1,
-    (1ull << 16) - 1, 1ull << 16, (1ull << 16) + 1,
-    (1ull << 32) - 1, 1ull << 32, (1ull << 32) + 1
+      1, 2, 3,
+      (1ull << 8) - 1, 1ull << 8, (1ull << 8) + 1,
+      (1ull << 16) - 1, 1ull << 16, (1ull << 16) + 1,
+      (1ull << 32) - 1, 1ull << 32, (1ull << 32) + 1
   };
-  for (int k = 0; k < sizeof(keys) / sizeof(keys[0]); k++) {
-    for (int s = 0; s < sizeof(seq) / sizeof(seq[0]); s++) {
+  for (int k = 0; k < sizeof(keys) / sizeof(keys[0]); k++)
+  {
+    for (int s = 0; s < sizeof(seq) / sizeof(seq[0]); s++)
+    {
       TestKey(keys[k], seq[s], kTypeValue);
       TestKey("hello", 1, kTypeDeletion);
     }
   }
 }
 
-TEST(FormatTest, InternalKeyShortSeparator) {
+TEST(FormatTest, InternalKeyShortSeparator)
+{
   // When user keys are same
   ASSERT_EQ(IKey("foo", 100, kTypeValue),
             Shorten(IKey("foo", 100, kTypeValue),
@@ -98,7 +108,8 @@ TEST(FormatTest, InternalKeyShortSeparator) {
                     IKey("foo", 200, kTypeValue)));
 }
 
-TEST(FormatTest, InternalKeyShortestSuccessor) {
+TEST(FormatTest, InternalKeyShortestSuccessor)
+{
   ASSERT_EQ(IKey("g", kMaxSequenceNumber, kValueTypeForSeek),
             ShortSuccessor(IKey("foo", 100, kTypeValue)));
   ASSERT_EQ(IKey("\xff\xff", 100, kTypeValue),
@@ -107,6 +118,7 @@ TEST(FormatTest, InternalKeyShortestSuccessor) {
 
 }  // namespace leveldb
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   return leveldb::test::RunAllTests();
 }

@@ -8,19 +8,20 @@
 #include "leveldb/comparator.h"
 #include "leveldb/env.h"
 #include "leveldb/filter_policy.h"
-#include "leveldb/options.h"
 #include "table/block_builder.h"
 #include "table/filter_block.h"
 #include "table/format.h"
 #include "util/coding.h"
 #include "util/crc32c.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-struct TableBuilder::Rep {
+struct TableBuilder::Rep
+{
   Options options;
   Options index_block_options;
-  WritableFile* file;
+  WritableFile *file;
   uint64_t offset;
   Status status;
   BlockBuilder data_block; // 数据块
@@ -29,7 +30,7 @@ struct TableBuilder::Rep {
   int64_t num_entries; // 记录的数目
   bool closed;         // 是否已经结束 // Either Finish() or Abandon() has been called.
   // FilterBlock
-  FilterBlockBuilder* filter_block; // 过滤块
+  FilterBlockBuilder *filter_block; // 过滤块
 
   // We do not emit the index entry for a block until we have seen the
   // first key for the next data block.  This allows us to use shorter
@@ -50,45 +51,53 @@ struct TableBuilder::Rep {
   // snappy压缩的输出存放地
   std::string compressed_output;
 
-  Rep(const Options& opt, WritableFile* f)
-      : options(opt),
-        index_block_options(opt),
-        file(f),
-        offset(0),
-        data_block(&options),
-        index_block(&index_block_options),
-        num_entries(0),
-        closed(false), // 只有在指定filter_policy的时候才会创建filter_block
-        filter_block(opt.filter_policy == NULL ? NULL
-                     : new FilterBlockBuilder(opt.filter_policy)),
+  Rep(const Options &opt, WritableFile *f)
+      :
+      options(opt),
+      index_block_options(opt),
+      file(f),
+      offset(0),
+      data_block(&options),
+      index_block(&index_block_options),
+      num_entries(0),
+      closed(false), // 只有在指定filter_policy的时候才会创建filter_block
+      filter_block(opt.filter_policy == NULL ? NULL
+                                             : new FilterBlockBuilder(opt.filter_policy)),
       // 当前的data block 为空
-        pending_index_entry(false) {
+      pending_index_entry(false)
+  {
     // index_block 的 restart_interval总是为1
     index_block_options.block_restart_interval = 1;
   }
 };
 
-TableBuilder::TableBuilder(const Options& options, WritableFile* file)
-    : rep_(new Rep(options, file)) {
-  if (rep_->filter_block != NULL) {
+TableBuilder::TableBuilder(const Options &options, WritableFile *file)
+    :
+    rep_(new Rep(options, file))
+{
+  if (rep_->filter_block != NULL)
+  {
     // 初始化filter block
     rep_->filter_block->StartBlock(0);
   }
 }
 
 // destructor
-TableBuilder::~TableBuilder() {
+TableBuilder::~TableBuilder()
+{
   assert(rep_->closed);  // Catch errors where caller forgot to call Finish()
   delete rep_->filter_block;
   delete rep_;
 }
 
-Status TableBuilder::ChangeOptions(const Options& options) {
+Status TableBuilder::ChangeOptions(const Options &options)
+{
   // Note: if more fields are added to Options, update
   // this function to catch changes that should not be allowed to
   // change in the middle of building a Table.
   // comparator 不能改变
-  if (options.comparator != rep_->options.comparator) {
+  if (options.comparator != rep_->options.comparator)
+  {
     return Status::InvalidArgument("changing comparator while building table");
   }
 
@@ -101,16 +110,22 @@ Status TableBuilder::ChangeOptions(const Options& options) {
   return Status::OK();
 }
 
-void TableBuilder::Add(const Slice& key, const Slice& value) {
-  Rep* r = rep_;
+void TableBuilder::Add(const Slice &key, const Slice &value)
+{
+  Rep *r = rep_;
   assert(!r->closed);
-  if (!ok()) return;
+  if (!ok())
+  {
+    return;
+  }
   // 断言Add的key比之前的更大
-  if (r->num_entries > 0) {
+  if (r->num_entries > 0)
+  {
     assert(r->options.comparator->Compare(key, Slice(r->last_key)) > 0);
   }
 
-  if (r->pending_index_entry) {
+  if (r->pending_index_entry)
+  {
     assert(r->data_block.empty());
     // 找到比last_key大，比key小的key，存放在last_key之中
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
@@ -123,7 +138,8 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   }
 
   // 向filter_block之中add key
-  if (r->filter_block != NULL) {
+  if (r->filter_block != NULL)
+  {
     r->filter_block->AddKey(key);
   }
 
@@ -136,55 +152,70 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
 
   const size_t estimated_block_size = r->data_block.CurrentSizeEstimate();
   // 若data block的大小超出设定值，Flush 4K
-  if (estimated_block_size >= r->options.block_size) {
+  if (estimated_block_size >= r->options.block_size)
+  {
     Flush();
   }
 }
 
-void TableBuilder::Flush() {
-  Rep* r = rep_;
+void TableBuilder::Flush()
+{
+  Rep *r = rep_;
   assert(!r->closed);
-  if (!ok()) return;
-  if (r->data_block.empty()) return;
+  if (!ok())
+  {
+    return;
+  }
+  if (r->data_block.empty())
+  {
+    return;
+  }
   // data block 不为空
   assert(!r->pending_index_entry);
   WriteBlock(&r->data_block, &r->pending_handle);
-  if (ok()) {
+  if (ok())
+  {
     // 需要写入新的数据块
     r->pending_index_entry = true;
     // flush
     r->status = r->file->Flush();
   }
   // 若filter_block不为空，那么开始对r->offset段写入滤值
-  if (r->filter_block != NULL) {
+  if (r->filter_block != NULL)
+  {
     r->filter_block->StartBlock(r->offset);
   }
 }
 
-void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
+void TableBuilder::WriteBlock(BlockBuilder *block, BlockHandle *handle)
+{
   // File format contains a sequence of blocks where each block has:
   //    block_data: uint8[n]
   //    type: uint8
   //    crc: uint32
   assert(ok());
-  Rep* r = rep_;
+  Rep *r = rep_;
   Slice raw = block->Finish();
 
   Slice block_contents;
   CompressionType type = r->options.compression;
   // TODO(postrelease): Support more compression options: zlib?
-  switch (type) {
-    case kNoCompression:
-      block_contents = raw;
+  switch (type)
+  {
+    case kNoCompression:block_contents = raw;
       break;
 
-    case kSnappyCompression: {
-      std::string* compressed = &r->compressed_output;
+    case kSnappyCompression:
+    {
+      std::string *compressed = &r->compressed_output;
       // 使用snappy压缩成功，并且压缩的空间大于12.5%
       if (port::Snappy_Compress(raw.data(), raw.size(), compressed) &&
-          compressed->size() < raw.size() - (raw.size() / 8u)) {
+          compressed->size() < raw.size() - (raw.size() / 8u))
+      {
         block_contents = *compressed;
-      } else {
+      }
+      else
+      {
         // Snappy not supported, or compressed less than 12.5%, so just
         // store uncompressed form
         block_contents = raw;
@@ -198,36 +229,41 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   block->Reset();
 }
 
-void TableBuilder::WriteRawBlock(const Slice& block_contents,
+void TableBuilder::WriteRawBlock(const Slice &block_contents,
                                  CompressionType type,
-                                 BlockHandle* handle) {
-  Rep* r = rep_;
+                                 BlockHandle *handle)
+{
+  Rep *r = rep_;
   // 设置offset和size, 其实设置在r->pending_handle之中
   handle->set_offset(r->offset);
   handle->set_size(block_contents.size());
   // 向file中写入block
   r->status = r->file->Append(block_contents);
-  if (r->status.ok()) {
+  if (r->status.ok())
+  {
     char trailer[kBlockTrailerSize];
     trailer[0] = type;
     uint32_t crc = crc32c::Value(block_contents.data(), block_contents.size());
     crc = crc32c::Extend(crc, trailer, 1);  // Extend crc to cover block type
-    EncodeFixed32(trailer+1, crc32c::Mask(crc));
+    EncodeFixed32(trailer + 1, crc32c::Mask(crc));
     // 写入trailer
     r->status = r->file->Append(Slice(trailer, kBlockTrailerSize));
-    if (r->status.ok()) {
+    if (r->status.ok())
+    {
       r->offset += block_contents.size() + kBlockTrailerSize;
     }
   }
 }
 
 // 返回状态
-Status TableBuilder::status() const {
+Status TableBuilder::status() const
+{
   return rep_->status;
 }
 
-Status TableBuilder::Finish() {
-  Rep* r = rep_;
+Status TableBuilder::Finish()
+{
+  Rep *r = rep_;
   Flush();
   assert(!r->closed);
   r->closed = true;
@@ -236,15 +272,18 @@ Status TableBuilder::Finish() {
 
   // Write filter block
   // 记录filter block 的handle
-  if (ok() && r->filter_block != NULL) {
+  if (ok() && r->filter_block != NULL)
+  {
     WriteRawBlock(r->filter_block->Finish(), kNoCompression,
                   &filter_block_handle);
   }
 
   // Write metaindex block
-  if (ok()) {
+  if (ok())
+  {
     BlockBuilder meta_index_block(&r->options);
-    if (r->filter_block != NULL) {
+    if (r->filter_block != NULL)
+    {
       // Add mapping from "filter.Name" to location of filter data
       std::string key = "filter.";
       key.append(r->options.filter_policy->Name());
@@ -259,8 +298,10 @@ Status TableBuilder::Finish() {
   }
 
   // Write index block
-  if (ok()) {
-    if (r->pending_index_entry) {
+  if (ok())
+  {
+    if (r->pending_index_entry)
+    {
       r->options.comparator->FindShortSuccessor(&r->last_key);
       std::string handle_encoding;
       r->pending_handle.EncodeTo(&handle_encoding);
@@ -272,14 +313,16 @@ Status TableBuilder::Finish() {
   }
 
   // Write footer
-  if (ok()) {
+  if (ok())
+  {
     Footer footer;
     footer.set_metaindex_handle(metaindex_block_handle);
     footer.set_index_handle(index_block_handle);
     std::string footer_encoding;
     footer.EncodeTo(&footer_encoding);
     r->status = r->file->Append(footer_encoding);
-    if (r->status.ok()) {
+    if (r->status.ok())
+    {
       r->offset += footer_encoding.size();
     }
   }
@@ -287,18 +330,21 @@ Status TableBuilder::Finish() {
 }
 
 // 放弃
-void TableBuilder::Abandon() {
-  Rep* r = rep_;
+void TableBuilder::Abandon()
+{
+  Rep *r = rep_;
   assert(!r->closed);
   r->closed = true;
 }
 
-uint64_t TableBuilder::NumEntries() const {
+uint64_t TableBuilder::NumEntries() const
+{
   return rep_->num_entries;
 }
 
 // 返回占用的文件的大小
-uint64_t TableBuilder::FileSize() const {
+uint64_t TableBuilder::FileSize() const
+{
   return rep_->offset;
 }
 

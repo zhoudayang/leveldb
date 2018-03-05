@@ -19,92 +19,111 @@
 #include "db/dbformat.h"
 #include "db/memtable.h"
 #include "db/write_batch_internal.h"
-#include "util/coding.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
 /// sequence number + count
 static const size_t kHeader = 12;
 
-WriteBatch::WriteBatch() {
+WriteBatch::WriteBatch()
+{
   Clear();
 }
 
-WriteBatch::~WriteBatch() { }
+WriteBatch::~WriteBatch() {}
 
-WriteBatch::Handler::~Handler() { }
+WriteBatch::Handler::~Handler() {}
 
-void WriteBatch::Clear() {
+void WriteBatch::Clear()
+{
   rep_.clear();
   rep_.resize(kHeader);
 }
 
-Status WriteBatch::Iterate(Handler* handler) const {
+Status WriteBatch::Iterate(Handler *handler) const
+{
   Slice input(rep_);
   /// rep_的大小不可能小于kHeader
-  if (input.size() < kHeader) {
+  if (input.size() < kHeader)
+  {
     return Status::Corruption("malformed WriteBatch (too small)");
   }
 
   input.remove_prefix(kHeader);
   Slice key, value;
   int found = 0;
-  while (!input.empty()) {
+  while (!input.empty())
+  {
     found++;
     char tag = input[0];
     input.remove_prefix(1);
-    switch (tag) {
+    switch (tag)
+    {
       case kTypeValue:
         if (GetLengthPrefixedSlice(&input, &key) &&
-            GetLengthPrefixedSlice(&input, &value)) {
+            GetLengthPrefixedSlice(&input, &value))
+        {
           /// 向memtable中进行插入
           handler->Put(key, value);
-        } else {
+        }
+        else
+        {
           return Status::Corruption("bad WriteBatch Put");
         }
         break;
       case kTypeDeletion:
-        if (GetLengthPrefixedSlice(&input, &key)) {
+        if (GetLengthPrefixedSlice(&input, &key))
+        {
           /// 从memtable之中删除
           handler->Delete(key);
-        } else {
+        }
+        else
+        {
           return Status::Corruption("bad WriteBatch Delete");
         }
         break;
-      default:
-        return Status::Corruption("unknown WriteBatch tag");
+      default:return Status::Corruption("unknown WriteBatch tag");
     }
   }
   /// iterate的数量不一致
-  if (found != WriteBatchInternal::Count(this)) {
+  if (found != WriteBatchInternal::Count(this))
+  {
     return Status::Corruption("WriteBatch has wrong count");
-  } else {
+  }
+  else
+  {
     return Status::OK();
   }
 }
 
 /// 返回rep_中记录的count大小
-int WriteBatchInternal::Count(const WriteBatch* b) {
+int WriteBatchInternal::Count(const WriteBatch *b)
+{
   return DecodeFixed32(b->rep_.data() + 8);
 }
 
 /// set count
-void WriteBatchInternal::SetCount(WriteBatch* b, int n) {
+void WriteBatchInternal::SetCount(WriteBatch *b, int n)
+{
   EncodeFixed32(&b->rep_[8], n);
 }
 
 /// 返回rep_中记录的sequence number
-SequenceNumber WriteBatchInternal::Sequence(const WriteBatch* b) {
+SequenceNumber WriteBatchInternal::Sequence(const WriteBatch *b)
+{
   return SequenceNumber(DecodeFixed64(b->rep_.data()));
 }
 
 /// 设置sequence number
-void WriteBatchInternal::SetSequence(WriteBatch* b, SequenceNumber seq) {
+void WriteBatchInternal::SetSequence(WriteBatch *b, SequenceNumber seq)
+{
   EncodeFixed64(&b->rep_[0], seq);
 }
 
-void WriteBatch::Put(const Slice& key, const Slice& value) {
+void WriteBatch::Put(const Slice &key, const Slice &value)
+{
   /// 更新count值
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
   /// 类型为kTypeValue
@@ -115,7 +134,8 @@ void WriteBatch::Put(const Slice& key, const Slice& value) {
   PutLengthPrefixedSlice(&rep_, value);
 }
 
-void WriteBatch::Delete(const Slice& key) {
+void WriteBatch::Delete(const Slice &key)
+{
   /// 更新Count值
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
   /// 类型为kTypeDeletion
@@ -124,17 +144,21 @@ void WriteBatch::Delete(const Slice& key) {
   PutLengthPrefixedSlice(&rep_, key);
 }
 
-namespace {
-class MemTableInserter : public WriteBatch::Handler {
+namespace
+{
+class MemTableInserter : public WriteBatch::Handler
+{
  public:
   SequenceNumber sequence_;
-  MemTable* mem_;
+  MemTable *mem_;
 
-  virtual void Put(const Slice& key, const Slice& value) {
+  virtual void Put(const Slice &key, const Slice &value)
+  {
     mem_->Add(sequence_, kTypeValue, key, value);
     sequence_++;
   }
-  virtual void Delete(const Slice& key) {
+  virtual void Delete(const Slice &key)
+  {
     mem_->Add(sequence_, kTypeDeletion, key, Slice());
     sequence_++;
   }
@@ -142,21 +166,24 @@ class MemTableInserter : public WriteBatch::Handler {
 }  // namespace
 
 /// 将WriteBatch对应的操作写入memtable之中
-Status WriteBatchInternal::InsertInto(const WriteBatch* b,
-                                      MemTable* memtable) {
+Status WriteBatchInternal::InsertInto(const WriteBatch *b,
+                                      MemTable *memtable)
+{
   MemTableInserter inserter;
   inserter.sequence_ = WriteBatchInternal::Sequence(b);
   inserter.mem_ = memtable;
   return b->Iterate(&inserter);
 }
 
-void WriteBatchInternal::SetContents(WriteBatch* b, const Slice& contents) {
+void WriteBatchInternal::SetContents(WriteBatch *b, const Slice &contents)
+{
   assert(contents.size() >= kHeader);
   b->rep_.assign(contents.data(), contents.size());
 }
 
 /// 将src对应writebatch的内容和dst合并
-void WriteBatchInternal::Append(WriteBatch* dst, const WriteBatch* src) {
+void WriteBatchInternal::Append(WriteBatch *dst, const WriteBatch *src)
+{
   SetCount(dst, Count(dst) + Count(src));
   assert(src->rep_.size() >= kHeader);
   dst->rep_.append(src->rep_.data() + kHeader, src->rep_.size() - kHeader);

@@ -10,7 +10,8 @@
 #include "leveldb/iterator.h"
 #include "leveldb/options.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 // Update Makefile if you change these
 /// 大版本号
@@ -27,57 +28,61 @@ class WriteBatch;
 // A Snapshot is an immutable object and can therefore be safely
 // accessed from multiple threads without any external synchronization.
 /// DB 特定状态的handle。一个Snapshot是一个不可更改的object，此object是线程安全的。
-class Snapshot {
+class Snapshot
+{
  protected:
   virtual ~Snapshot();
 };
 
 // A range of keys
 /// keys的取值范围
-struct Range {
+struct Range
+{
   Slice start;          // Included in the range
   Slice limit;          // Not included in the range
 
-  Range() { }
-  Range(const Slice& s, const Slice& l) : start(s), limit(l) { }
+  Range() {}
+  Range(const Slice &s, const Slice &l) :
+      start(s), limit(l) {}
 };
 
 // A DB is a persistent ordered map from keys to values.
 // A DB is safe for concurrent access from multiple threads without
 // any external synchronization.
 /// DB是一个持久的有序的键值对序列。DB是线程安全的。
-class DB {
+class DB
+{
  public:
   // Open the database with the specified "name".
   // Stores a pointer to a heap-allocated database in *dbptr and returns
   // OK on success.
   // Stores NULL in *dbptr and returns a non-OK status on error.
   // Caller should delete *dbptr when it is no longer needed.
-  static Status Open(const Options& options,
-                     const std::string& name,
-                     DB** dbptr);
+  static Status Open(const Options &options,
+                     const std::string &name,
+                     DB **dbptr);
 
-  DB() { }
+  DB() {}
   virtual ~DB();
 
   // Set the database entry for "key" to "value".  Returns OK on success,
   // and a non-OK status on error.
   // Note: consider setting options.sync = true.
-  virtual Status Put(const WriteOptions& options,
-                     const Slice& key,
-                     const Slice& value) = 0;
+  virtual Status Put(const WriteOptions &options,
+                     const Slice &key,
+                     const Slice &value) = 0;
 
   // Remove the database entry (if any) for "key".  Returns OK on
   // success, and a non-OK status on error.  It is not an error if "key"
   // did not exist in the database.
   // Note: consider setting options.sync = true.
-  virtual Status Delete(const WriteOptions& options, const Slice& key) = 0;
+  virtual Status Delete(const WriteOptions &options, const Slice &key) = 0;
 
   // Apply the specified updates to the database.
   // Returns OK on success, non-OK on failure.
   // Note: consider setting options.sync = true.
   /// 将updates对应的更新写入到数据库
-  virtual Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
+  virtual Status Write(const WriteOptions &options, WriteBatch *updates) = 0;
 
   // If the database contains an entry for "key" store the
   // corresponding value in *value and return OK.
@@ -86,8 +91,8 @@ class DB {
   // a status for which Status::IsNotFound() returns true.
   //
   // May return some other Status on an error.
-  virtual Status Get(const ReadOptions& options,
-                     const Slice& key, std::string* value) = 0;
+  virtual Status Get(const ReadOptions &options,
+                     const Slice &key, std::string *value) = 0;
 
   // Return a heap-allocated iterator over the contents of the database.
   // The result of NewIterator() is initially invalid (caller must
@@ -96,18 +101,18 @@ class DB {
   // Caller should delete the iterator when it is no longer needed.
   // The returned iterator should be deleted before this db is deleted.
   /// 返回一个在堆上建立的iterator对象，可以借助此iterator来遍历整个数据库
-  virtual Iterator* NewIterator(const ReadOptions& options) = 0;
+  virtual Iterator *NewIterator(const ReadOptions &options) = 0;
 
   // Return a handle to the current DB state.  Iterators created with
   // this handle will all observe a stable snapshot of the current DB
   // state.  The caller must call ReleaseSnapshot(result) when the
   // snapshot is no longer needed.
   /// 返回当前DB状态的handle
-  virtual const Snapshot* GetSnapshot() = 0;
+  virtual const Snapshot *GetSnapshot() = 0;
 
   // Release a previously acquired snapshot.  The caller must not
   // use "snapshot" after this call.
-  virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
+  virtual void ReleaseSnapshot(const Snapshot *snapshot) = 0;
 
   // DB implementations can export properties about their state
   // via this method.  If "property" is a valid property understood by this
@@ -125,7 +130,7 @@ class DB {
   //     of the sstables that make up the db contents.
   //  "leveldb.approximate-memory-usage" - returns the approximate number of
   //     bytes of memory in use by the DB.
-  virtual bool GetProperty(const Slice& property, std::string* value) = 0;
+  virtual bool GetProperty(const Slice &property, std::string *value) = 0;
 
   // For each i in [0,n-1], store in "sizes[i]", the approximate
   // file system space used by keys in "[range[i].start .. range[i].limit)".
@@ -135,8 +140,8 @@ class DB {
   // sizes will be one-tenth the size of the corresponding user data size.
   //
   // The results may not include the sizes of recently written data.
-  virtual void GetApproximateSizes(const Range* range, int n,
-                                   uint64_t* sizes) = 0;
+  virtual void GetApproximateSizes(const Range *range, int n,
+                                   uint64_t *sizes) = 0;
 
   // Compact the underlying storage for the key range [*begin,*end].
   // In particular, deleted and overwritten versions are discarded,
@@ -148,18 +153,18 @@ class DB {
   // end==NULL is treated as a key after all keys in the database.
   // Therefore the following call will compact the entire database:
   //    db->CompactRange(NULL, NULL);
-  virtual void CompactRange(const Slice* begin, const Slice* end) = 0;
+  virtual void CompactRange(const Slice *begin, const Slice *end) = 0;
 
  private:
   // No copying allowed
-  DB(const DB&);
-  void operator=(const DB&);
+  DB(const DB &);
+  void operator=(const DB &);
 };
 
 // Destroy the contents of the specified database.
 // Be very careful using this method.
 /// 删除特定数据库的内容
-Status DestroyDB(const std::string& name, const Options& options);
+Status DestroyDB(const std::string &name, const Options &options);
 
 // If a DB cannot be opened, you may attempt to call this method to
 // resurrect as much of the contents of the database as possible.
@@ -167,7 +172,7 @@ Status DestroyDB(const std::string& name, const Options& options);
 // on a database that contains important information.
 /// 如果数据库不能打开，可以尝试使用此方法尽可能恢复数据。一些数据可能会丢失，所以在数据库
 /// 中存储有重要数据时调用此方法需要格外谨慎。
-Status RepairDB(const std::string& dbname, const Options& options);
+Status RepairDB(const std::string &dbname, const Options &options);
 
 }  // namespace leveldb
 

@@ -10,32 +10,35 @@
 #include "leveldb/slice.h"
 #include "leveldb/status.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 // pre define of WritableFile class
 class WritableFile;
 
-namespace log {
+namespace log
+{
 
-class Writer {
+class Writer
+{
  public:
   // Create a writer that will append data to "*dest".
   // "*dest" must be initially empty.
   // "*dest" must remain live while this Writer is in use.
-  explicit Writer(WritableFile* dest);
+  explicit Writer(WritableFile *dest);
 
   // Create a writer that will append data to "*dest".
   // "*dest" must have initial length "dest_length".
   // "*dest" must remain live while this Writer is in use.
-  Writer(WritableFile* dest, uint64_t dest_length);
+  Writer(WritableFile *dest, uint64_t dest_length);
 
   ~Writer();
 
-  Status AddRecord(const Slice& slice);
+  Status AddRecord(const Slice &slice);
 
  private:
   /// 文件写入的目的地
-  WritableFile* dest_;
+  WritableFile *dest_;
   /// 当前文件块内偏移位置
   int block_offset_;       // Current offset in block
 
@@ -46,11 +49,11 @@ class Writer {
   uint32_t type_crc_[kMaxRecordType + 1];
 
   /// 存储物理记录
-  Status EmitPhysicalRecord(RecordType type, const char* ptr, size_t length);
+  Status EmitPhysicalRecord(RecordType type, const char *ptr, size_t length);
 
   // No copying allowed
-  Writer(const Writer&);
-  void operator=(const Writer&);
+  Writer(const Writer &);
+  void operator=(const Writer &);
 };
 
 }  // namespace log

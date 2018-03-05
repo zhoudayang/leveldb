@@ -4,16 +4,18 @@
 
 #include <stdio.h>
 #include "leveldb/dumpfile.h"
-#include "leveldb/env.h"
-#include "leveldb/status.h"
 
-namespace leveldb {
-namespace {
+namespace leveldb
+{
+namespace
+{
 
 /// 此WritableFile 将输出写入到标准输出
-class StdoutPrinter : public WritableFile {
+class StdoutPrinter : public WritableFile
+{
  public:
-  virtual Status Append(const Slice& data) {
+  virtual Status Append(const Slice &data)
+  {
     fwrite(data.data(), 1, data.size(), stdout);
     return Status::OK();
   }
@@ -23,12 +25,15 @@ class StdoutPrinter : public WritableFile {
 };
 
 /// 将文件dump输出到标准输出
-bool HandleDumpCommand(Env* env, char** files, int num) {
+bool HandleDumpCommand(Env *env, char **files, int num)
+{
   StdoutPrinter printer;
   bool ok = true;
-  for (int i = 0; i < num; i++) {
+  for (int i = 0; i < num; i++)
+  {
     Status s = DumpFile(env, files[i], &printer);
-    if (!s.ok()) {
+    if (!s.ok())
+    {
       fprintf(stderr, "%s\n", s.ToString().c_str());
       ok = false;
     }
@@ -39,25 +44,33 @@ bool HandleDumpCommand(Env* env, char** files, int num) {
 }  // namespace
 }  // namespace leveldb
 
-static void Usage() {
+static void Usage()
+{
   fprintf(
       stderr,
       "Usage: leveldbutil command...\n"
-      "   dump files...         -- dump contents of specified files\n"
-      );
+          "   dump files...         -- dump contents of specified files\n"
+  );
 }
 
-int main(int argc, char** argv) {
-  leveldb::Env* env = leveldb::Env::Default();
+int main(int argc, char **argv)
+{
+  leveldb::Env *env = leveldb::Env::Default();
   bool ok = true;
-  if (argc < 2) {
+  if (argc < 2)
+  {
     Usage();
     ok = false;
-  } else {
+  }
+  else
+  {
     std::string command = argv[1];
-    if (command == "dump") {
-      ok = leveldb::HandleDumpCommand(env, argv+2, argc-2);
-    } else {
+    if (command == "dump")
+    {
+      ok = leveldb::HandleDumpCommand(env, argv + 2, argc - 2);
+    }
+    else
+    {
       Usage();
       ok = false;
     }

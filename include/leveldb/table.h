@@ -8,7 +8,8 @@
 #include <stdint.h>
 #include "leveldb/iterator.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class Block;
 class BlockHandle;
@@ -21,7 +22,8 @@ class TableCache;
 // A Table is a sorted map from strings to strings.  Tables are
 // immutable and persistent.  A Table may be safely accessed from
 // multiple threads without external synchronization.
-class Table {
+class Table
+{
  public:
   // Attempt to open the table that is stored in bytes [0..file_size)
   // of "file", and read the metadata entries necessary to allow
@@ -35,17 +37,17 @@ class Table {
   // for the duration of the returned table's lifetime.
   //
   // *file must remain live while this Table is in use.
-  static Status Open(const Options& options,
-                     RandomAccessFile* file,
+  static Status Open(const Options &options,
+                     RandomAccessFile *file,
                      uint64_t file_size,
-                     Table** table);
+                     Table **table);
 
   ~Table();
 
   // Returns a new iterator over the table contents.
   // The result of NewIterator() is initially invalid (caller must
   // call one of the Seek methods on the iterator before using it).
-  Iterator* NewIterator(const ReadOptions&) const;
+  Iterator *NewIterator(const ReadOptions &) const;
 
   // Given a key, return an approximate byte offset in the file where
   // the data for that key begins (or would begin if the key were
@@ -53,32 +55,32 @@ class Table {
   // bytes, and so includes effects like compression of the underlying data.
   // E.g., the approximate offset of the last key in the table will
   // be close to the file length.
-  uint64_t ApproximateOffsetOf(const Slice& key) const;
+  uint64_t ApproximateOffsetOf(const Slice &key) const;
 
  private:
   struct Rep;
-  Rep* rep_;
+  Rep *rep_;
 
-  explicit Table(Rep* rep) { rep_ = rep; }
-  static Iterator* BlockReader(void*, const ReadOptions&, const Slice&);
+  explicit Table(Rep *rep) { rep_ = rep; }
+  static Iterator *BlockReader(void *, const ReadOptions &, const Slice &);
 
   // Calls (*handle_result)(arg, ...) with the entry found after a call
   // to Seek(key).  May not make such a call if filter policy says
   // that key is not present.
   friend class TableCache;
   Status InternalGet(
-      const ReadOptions&, const Slice& key,
-      void* arg,
-      void (*handle_result)(void* arg, const Slice& k, const Slice& v));
+      const ReadOptions &, const Slice &key,
+      void *arg,
+      void (*handle_result)(void *arg, const Slice &k, const Slice &v));
 
   // read meta block
-  void ReadMeta(const Footer& footer);
+  void ReadMeta(const Footer &footer);
   // read filter block
-  void ReadFilter(const Slice& filter_handle_value);
+  void ReadFilter(const Slice &filter_handle_value);
 
   // No copying allowed
-  Table(const Table&);
-  void operator=(const Table&);
+  Table(const Table &);
+  void operator=(const Table &);
 };
 
 }  // namespace leveldb

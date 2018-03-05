@@ -14,36 +14,45 @@
 #include <time.h>
 #include "leveldb/env.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-class PosixLogger : public Logger {
+class PosixLogger : public Logger
+{
  private:
-  FILE* file_;
+  FILE *file_;
   // the function to get thread id
   uint64_t (*gettid_)();  // Return the thread id for the current thread
  public:
-  PosixLogger(FILE* f, uint64_t (*gettid)()) : file_(f), gettid_(gettid) { }
-  virtual ~PosixLogger() {
+  PosixLogger(FILE *f, uint64_t (*gettid)()) :
+      file_(f), gettid_(gettid) {}
+  virtual ~PosixLogger()
+  {
     fclose(file_);
   }
-  virtual void Logv(const char* format, va_list ap) {
+  virtual void Logv(const char *format, va_list ap)
+  {
     const uint64_t thread_id = (*gettid_)();
 
     // We try twice: the first time with a fixed-size stack allocated buffer,
     // and the second time with a much larger dynamically allocated buffer.
     char buffer[500];
-    for (int iter = 0; iter < 2; iter++) {
-      char* base;
+    for (int iter = 0; iter < 2; iter++)
+    {
+      char *base;
       int bufsize;
-      if (iter == 0) {
+      if (iter == 0)
+      {
         bufsize = sizeof(buffer);
         base = buffer;
-      } else {
+      }
+      else
+      {
         bufsize = 30000;
         base = new char[bufsize];
       }
-      char* p = base;
-      char* limit = base + bufsize;
+      char *p = base;
+      char *limit = base + bufsize;
 
       struct timeval now_tv;
       gettimeofday(&now_tv, NULL);
@@ -62,7 +71,8 @@ class PosixLogger : public Logger {
                     static_cast<long long unsigned int>(thread_id));
 
       // Print the message
-      if (p < limit) {
+      if (p < limit)
+      {
         va_list backup_ap;
         va_copy(backup_ap, ap);
         p += vsnprintf(p, limit - p, format, backup_ap);
@@ -70,23 +80,29 @@ class PosixLogger : public Logger {
       }
 
       // Truncate to available space if necessary
-      if (p >= limit) {
-        if (iter == 0) {
+      if (p >= limit)
+      {
+        if (iter == 0)
+        {
           continue;       // Try again with larger buffer
-        } else {
+        }
+        else
+        {
           p = limit - 1;
         }
       }
 
       // Add newline if necessary
-      if (p == base || p[-1] != '\n') {
+      if (p == base || p[-1] != '\n')
+      {
         *p++ = '\n';
       }
 
       assert(p <= limit);
       fwrite(base, 1, p - base, file_);
       fflush(file_);
-      if (base != buffer) {
+      if (base != buffer)
+      {
         delete[] base;
       }
       break;

@@ -6,80 +6,93 @@
 
 #include "db/filename.h"
 #include "leveldb/env.h"
-#include "leveldb/table.h"
-#include "util/coding.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-struct TableAndFile {
-  RandomAccessFile* file;
-  Table* table;
+struct TableAndFile
+{
+  RandomAccessFile *file;
+  Table *table;
 };
 
 /// delete table, file, and TableAndFile object allocated on heap
-static void DeleteEntry(const Slice& key, void* value) {
-  TableAndFile* tf = reinterpret_cast<TableAndFile*>(value);
+static void DeleteEntry(const Slice &key, void *value)
+{
+  TableAndFile *tf = reinterpret_cast<TableAndFile *>(value);
   delete tf->table;
   /// 此处关闭了打开的文件
   delete tf->file;
   delete tf;
 }
 
-static void UnrefEntry(void* arg1, void* arg2) {
+static void UnrefEntry(void *arg1, void *arg2)
+{
   /// get cache ptr
-  Cache* cache = reinterpret_cast<Cache*>(arg1);
+  Cache *cache = reinterpret_cast<Cache *>(arg1);
   /// get cache data
-  Cache::Handle* h = reinterpret_cast<Cache::Handle*>(arg2);
+  Cache::Handle *h = reinterpret_cast<Cache::Handle *>(arg2);
   /// release data to cache
   cache->Release(h);
 }
 
-TableCache::TableCache(const std::string& dbname,
-                       const Options* options,
+TableCache::TableCache(const std::string &dbname,
+                       const Options *options,
                        int entries)
-    : env_(options->env),
-      dbname_(dbname),
-      options_(options),
-      cache_(NewLRUCache(entries)) { // create LRUCache
+    :
+    env_(options->env),
+    dbname_(dbname),
+    options_(options),
+    cache_(NewLRUCache(entries))
+{ // create LRUCache
 }
 
-TableCache::~TableCache() {
+TableCache::~TableCache()
+{
   delete cache_;
 }
 
 Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
-                             Cache::Handle** handle) {
+                             Cache::Handle **handle)
+{
   Status s;
   /// use file_number as key
   char buf[sizeof(file_number)];
   EncodeFixed64(buf, file_number);
   Slice key(buf, sizeof(buf));
   *handle = cache_->Lookup(key);
-  if (*handle == NULL) {
+  if (*handle == NULL)
+  {
     std::string fname = TableFileName(dbname_, file_number);
-    RandomAccessFile* file = NULL;
-    Table* table = NULL;
+    RandomAccessFile *file = NULL;
+    Table *table = NULL;
     ///首先尝试ldb文件，再尝试sst文件
     s = env_->NewRandomAccessFile(fname, &file);
-    if (!s.ok()) {
+    if (!s.ok())
+    {
       std::string old_fname = SSTTableFileName(dbname_, file_number);
-      if (env_->NewRandomAccessFile(old_fname, &file).ok()) {
+      if (env_->NewRandomAccessFile(old_fname, &file).ok())
+      {
         s = Status::OK();
       }
     }
-    if (s.ok()) {
+    if (s.ok())
+    {
       /// 打开sstable
       s = Table::Open(*options_, file, file_size, &table);
     }
 
-    if (!s.ok()) {
+    if (!s.ok())
+    {
       assert(table == NULL);
       delete file;
       // We do not cache error results so that if the error is transient,
       // or somebody repairs the file, we recover automatically.
-    } else {
+    }
+    else
+    {
       /// 记录sstable，file object
-      TableAndFile* tf = new TableAndFile;
+      TableAndFile *tf = new TableAndFile;
       tf->file = file;
       tf->table = table;
       /// 占用cache_的空间为1，表示一条记录。
@@ -90,42 +103,48 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
   return s;
 }
 
-Iterator* TableCache::NewIterator(const ReadOptions& options,
+Iterator *TableCache::NewIterator(const ReadOptions &options,
                                   uint64_t file_number,
                                   uint64_t file_size,
-                                  Table** tableptr) {
-  if (tableptr != NULL) {
+                                  Table **tableptr)
+{
+  if (tableptr != NULL)
+  {
     *tableptr = NULL;
   }
 
-  Cache::Handle* handle = NULL;
+  Cache::Handle *handle = NULL;
   Status s = FindTable(file_number, file_size, &handle);
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     return NewErrorIterator(s);
   }
 
   /// 获取sstable对象
-  Table* table = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
-  Iterator* result = table->NewIterator(options);
+  Table *table = reinterpret_cast<TableAndFile *>(cache_->Value(handle))->table;
+  Iterator *result = table->NewIterator(options);
   // when destruct, release from cache
   result->RegisterCleanup(&UnrefEntry, cache_, handle);
-  if (tableptr != NULL) {
+  if (tableptr != NULL)
+  {
     /// 记录对应的sstable
     *tableptr = table;
   }
   return result;
 }
 
-Status TableCache::Get(const ReadOptions& options,
+Status TableCache::Get(const ReadOptions &options,
                        uint64_t file_number,
                        uint64_t file_size,
-                       const Slice& k,
-                       void* arg,
-                       void (*saver)(void*, const Slice&, const Slice&)) {
-  Cache::Handle* handle = NULL;
+                       const Slice &k,
+                       void *arg,
+                       void (*saver)(void *, const Slice &, const Slice &))
+{
+  Cache::Handle *handle = NULL;
   Status s = FindTable(file_number, file_size, &handle);
-  if (s.ok()) {
-    Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
+  if (s.ok())
+  {
+    Table *t = reinterpret_cast<TableAndFile *>(cache_->Value(handle))->table;
     s = t->InternalGet(options, k, arg, saver);
     cache_->Release(handle);
   }
@@ -133,7 +152,8 @@ Status TableCache::Get(const ReadOptions& options,
 }
 
 /// 从cache中删除file_number对应的记录
-void TableCache::Evict(uint64_t file_number) {
+void TableCache::Evict(uint64_t file_number)
+{
   char buf[sizeof(file_number)];
   EncodeFixed64(buf, file_number);
   cache_->Erase(Slice(buf, sizeof(buf)));

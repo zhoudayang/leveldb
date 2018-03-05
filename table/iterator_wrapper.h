@@ -10,7 +10,8 @@
 
 // complete: 2017-06-10
 
-namespace leveldb {
+namespace leveldb
+{
 
 // A internal wrapper class with an interface similar to Iterator that
 // caches the valid() and key() results for an underlying iterator.
@@ -18,49 +19,95 @@ namespace leveldb {
 // cache locality.
 
 // 缓存了key和valid()的结果， 避免了对于虚函数的调用，并且提供了更好的局部性
-class IteratorWrapper {
+class IteratorWrapper
+{
  public:
-  IteratorWrapper(): iter_(NULL), valid_(false) { }
-  explicit IteratorWrapper(Iterator* iter): iter_(NULL) {
+  IteratorWrapper() :
+      iter_(NULL), valid_(false) {}
+  explicit IteratorWrapper(Iterator *iter) :
+      iter_(NULL)
+  {
     Set(iter);
   }
   ~IteratorWrapper() { delete iter_; }
-  Iterator* iter() const { return iter_; }
+  Iterator *iter() const { return iter_; }
 
   // Takes ownership of "iter" and will delete it when destroyed, or
   // when Set() is invoked again.
-  void Set(Iterator* iter) {
+  void Set(Iterator *iter)
+  {
     delete iter_;
     iter_ = iter;
-    if (iter_ == NULL) {
+    if (iter_ == NULL)
+    {
       valid_ = false;
-    } else {
+    }
+    else
+    {
       Update();
     }
   }
 
-
   // Iterator interface methods
-  bool Valid() const        { return valid_; }
-  Slice key() const         { assert(Valid()); return key_; }
-  Slice value() const       { assert(Valid()); return iter_->value(); }
+  bool Valid() const { return valid_; }
+  Slice key() const
+  {
+    assert(Valid());
+    return key_;
+  }
+  Slice value() const
+  {
+    assert(Valid());
+    return iter_->value();
+  }
   // Methods below require iter() != NULL
-  Status status() const     { assert(iter_); return iter_->status(); }
-  void Next()               { assert(iter_); iter_->Next();        Update(); }
-  void Prev()               { assert(iter_); iter_->Prev();        Update(); }
-  void Seek(const Slice& k) { assert(iter_); iter_->Seek(k);       Update(); }
-  void SeekToFirst()        { assert(iter_); iter_->SeekToFirst(); Update(); }
-  void SeekToLast()         { assert(iter_); iter_->SeekToLast();  Update(); }
+  Status status() const
+  {
+    assert(iter_);
+    return iter_->status();
+  }
+  void Next()
+  {
+    assert(iter_);
+    iter_->Next();
+    Update();
+  }
+  void Prev()
+  {
+    assert(iter_);
+    iter_->Prev();
+    Update();
+  }
+  void Seek(const Slice &k)
+  {
+    assert(iter_);
+    iter_->Seek(k);
+    Update();
+  }
+  void SeekToFirst()
+  {
+    assert(iter_);
+    iter_->SeekToFirst();
+    Update();
+  }
+  void SeekToLast()
+  {
+    assert(iter_);
+    iter_->SeekToLast();
+    Update();
+  }
 
  private:
-  void Update() {
+  void Update()
+  {
     valid_ = iter_->Valid();
-    if (valid_) {
+    if (valid_)
+    {
       key_ = iter_->key();
     }
   }
 
-  Iterator* iter_;
+  Iterator *iter_;
   bool valid_;
   Slice key_;
 };

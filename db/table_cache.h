@@ -14,13 +14,15 @@
 #include "leveldb/table.h"
 #include "port/port.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class Env;
 
-class TableCache {
+class TableCache
+{
  public:
-  TableCache(const std::string& dbname, const Options* options, int entries);
+  TableCache(const std::string &dbname, const Options *options, int entries);
   ~TableCache();
 
   // Return an iterator for the specified file number (the corresponding
@@ -31,33 +33,33 @@ class TableCache {
   // the cache and should not be deleted, and is valid for as long as the
   // returned iterator is live.
   /// 返回file_number指定文件的迭代器，若tableptr非空，设置*tableptr指向sstable对象。
-  Iterator* NewIterator(const ReadOptions& options,
+  Iterator *NewIterator(const ReadOptions &options,
                         uint64_t file_number,
                         uint64_t file_size,
-                        Table** tableptr = NULL);
+                        Table **tableptr = NULL);
 
   // If a seek to internal key "k" in specified file finds an entry,
   // call (*handle_result)(arg, found_key, found_value).
   /// 若在指定的文件中找到了internal key -> k, 在其上执行found_result函数
   /// get k from sstable specified as file_number
-  Status Get(const ReadOptions& options,
+  Status Get(const ReadOptions &options,
              uint64_t file_number,
              uint64_t file_size,
-             const Slice& k,
-             void* arg,
-             void (*handle_result)(void*, const Slice&, const Slice&));
+             const Slice &k,
+             void *arg,
+             void (*handle_result)(void *, const Slice &, const Slice &));
 
   // Evict any entry for the specified file number
   /// 删除file_number对应的记录
   void Evict(uint64_t file_number);
 
  private:
-  Env* const env_; // environment
+  Env *const env_; // environment
   const std::string dbname_; // db name
-  const Options* options_; // options
-  Cache* cache_; // cache
+  const Options *options_; // options
+  Cache *cache_; // cache
 
-  Status FindTable(uint64_t file_number, uint64_t file_size, Cache::Handle**);
+  Status FindTable(uint64_t file_number, uint64_t file_size, Cache::Handle **);
 };
 
 }  // namespace leveldb

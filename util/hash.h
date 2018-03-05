@@ -10,9 +10,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace leveldb {
+namespace leveldb
+{
 
-extern uint32_t Hash(const char* data, size_t n, uint32_t seed);
+extern uint32_t Hash(const char *data, size_t n, uint32_t seed);
 
 }
 

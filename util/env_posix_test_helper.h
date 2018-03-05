@@ -5,12 +5,14 @@
 #ifndef STORAGE_LEVELDB_UTIL_ENV_POSIX_TEST_HELPER_H_
 #define STORAGE_LEVELDB_UTIL_ENV_POSIX_TEST_HELPER_H_
 
-namespace leveldb {
+namespace leveldb
+{
 
 class EnvPosixTest;
 
 // A helper for the POSIX Env to facilitate testing.
-class EnvPosixTestHelper {
+class EnvPosixTestHelper
+{
  private:
   friend class EnvPosixTest;
 

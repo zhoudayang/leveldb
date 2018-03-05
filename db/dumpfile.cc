@@ -9,24 +9,25 @@
 #include "db/version_edit.h"
 #include "db/write_batch_internal.h"
 #include "leveldb/env.h"
-#include "leveldb/iterator.h"
-#include "leveldb/options.h"
-#include "leveldb/status.h"
 #include "leveldb/table.h"
-#include "leveldb/write_batch.h"
-#include "util/logging.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-namespace {
+namespace
+{
 
 /// 猜测输入文件的类型
-bool GuessType(const std::string& fname, FileType* type) {
+bool GuessType(const std::string &fname, FileType *type)
+{
   size_t pos = fname.rfind('/');
   std::string basename;
-  if (pos == std::string::npos) {
+  if (pos == std::string::npos)
+  {
     basename = fname;
-  } else {
+  }
+  else
+  {
     basename = std::string(fname.data() + pos + 1, fname.size() - pos - 1);
   }
   uint64_t ignored;
@@ -35,10 +36,12 @@ bool GuessType(const std::string& fname, FileType* type) {
 
 // Notified when log reader encounters corruption.
 /// 将崩溃相关信息写入到文件之中
-class CorruptionReporter : public log::Reader::Reporter {
+class CorruptionReporter : public log::Reader::Reporter
+{
  public:
-  WritableFile* dst_;
-  virtual void Corruption(size_t bytes, const Status& status) {
+  WritableFile *dst_;
+  virtual void Corruption(size_t bytes, const Status &status)
+  {
     std::string r = "corruption: ";
     AppendNumberTo(&r, bytes);
     r += " bytes; ";
@@ -49,12 +52,14 @@ class CorruptionReporter : public log::Reader::Reporter {
 };
 
 // Print contents of a log file. (*func)() is called on every record.
-Status PrintLogContents(Env* env, const std::string& fname,
-                        void (*func)(uint64_t, Slice, WritableFile*),
-                        WritableFile* dst) {
-  SequentialFile* file;
+Status PrintLogContents(Env *env, const std::string &fname,
+                        void (*func)(uint64_t, Slice, WritableFile *),
+                        WritableFile *dst)
+{
+  SequentialFile *file;
   Status s = env->NewSequentialFile(fname, &file);
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     return s;
   }
   CorruptionReporter reporter;
@@ -62,7 +67,8 @@ Status PrintLogContents(Env* env, const std::string& fname,
   log::Reader reader(file, &reporter, true, 0);
   Slice record;
   std::string scratch;
-  while (reader.ReadRecord(&record, &scratch)) {
+  while (reader.ReadRecord(&record, &scratch))
+  {
     (*func)(reader.LastRecordOffset(), record, dst);
   }
   delete file;
@@ -70,10 +76,12 @@ Status PrintLogContents(Env* env, const std::string& fname,
 }
 
 // Called on every item found in a WriteBatch.
-class WriteBatchItemPrinter : public WriteBatch::Handler {
+class WriteBatchItemPrinter : public WriteBatch::Handler
+{
  public:
-  WritableFile* dst_;
-  virtual void Put(const Slice& key, const Slice& value) {
+  WritableFile *dst_;
+  virtual void Put(const Slice &key, const Slice &value)
+  {
     std::string r = "  put '";
     AppendEscapedStringTo(&r, key);
     r += "' '";
@@ -81,7 +89,8 @@ class WriteBatchItemPrinter : public WriteBatch::Handler {
     r += "'\n";
     dst_->Append(r);
   }
-  virtual void Delete(const Slice& key) {
+  virtual void Delete(const Slice &key)
+  {
     std::string r = "  del '";
     AppendEscapedStringTo(&r, key);
     r += "'\n";
@@ -89,14 +98,15 @@ class WriteBatchItemPrinter : public WriteBatch::Handler {
   }
 };
 
-
 // Called on every log record (each one of which is a WriteBatch)
 // found in a kLogFile.
-static void WriteBatchPrinter(uint64_t pos, Slice record, WritableFile* dst) {
+static void WriteBatchPrinter(uint64_t pos, Slice record, WritableFile *dst)
+{
   std::string r = "--- offset ";
   AppendNumberTo(&r, pos);
   r += "; ";
-  if (record.size() < 12) {
+  if (record.size() < 12)
+  {
     r += "log record length ";
     AppendNumberTo(&r, record.size());
     r += " is too small\n";
@@ -112,52 +122,63 @@ static void WriteBatchPrinter(uint64_t pos, Slice record, WritableFile* dst) {
   WriteBatchItemPrinter batch_item_printer;
   batch_item_printer.dst_ = dst;
   Status s = batch.Iterate(&batch_item_printer);
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     dst->Append("  error: " + s.ToString() + "\n");
   }
 }
 
-Status DumpLog(Env* env, const std::string& fname, WritableFile* dst) {
+Status DumpLog(Env *env, const std::string &fname, WritableFile *dst)
+{
   return PrintLogContents(env, fname, WriteBatchPrinter, dst);
 }
 
 // Called on every log record (each one of which is a WriteBatch)
 // found in a kDescriptorFile.
-static void VersionEditPrinter(uint64_t pos, Slice record, WritableFile* dst) {
+static void VersionEditPrinter(uint64_t pos, Slice record, WritableFile *dst)
+{
   std::string r = "--- offset ";
   AppendNumberTo(&r, pos);
   r += "; ";
   VersionEdit edit;
   Status s = edit.DecodeFrom(record);
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     r += s.ToString();
     r.push_back('\n');
-  } else {
+  }
+  else
+  {
     r += edit.DebugString();
   }
   dst->Append(r);
 }
 
-Status DumpDescriptor(Env* env, const std::string& fname, WritableFile* dst) {
+Status DumpDescriptor(Env *env, const std::string &fname, WritableFile *dst)
+{
   return PrintLogContents(env, fname, VersionEditPrinter, dst);
 }
 
-Status DumpTable(Env* env, const std::string& fname, WritableFile* dst) {
+Status DumpTable(Env *env, const std::string &fname, WritableFile *dst)
+{
   uint64_t file_size;
-  RandomAccessFile* file = NULL;
-  Table* table = NULL;
+  RandomAccessFile *file = NULL;
+  Table *table = NULL;
   Status s = env->GetFileSize(fname, &file_size);
-  if (s.ok()) {
+  if (s.ok())
+  {
     s = env->NewRandomAccessFile(fname, &file);
   }
-  if (s.ok()) {
+  if (s.ok())
+  {
     // We use the default comparator, which may or may not match the
     // comparator used in this database. However this should not cause
     // problems since we only use Table operations that do not require
     // any comparisons.  In particular, we do not call Seek or Prev.
     s = Table::Open(Options(), file, file_size, &table);
   }
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     delete table;
     delete file;
     return s;
@@ -165,29 +186,38 @@ Status DumpTable(Env* env, const std::string& fname, WritableFile* dst) {
 
   ReadOptions ro;
   ro.fill_cache = false;
-  Iterator* iter = table->NewIterator(ro);
+  Iterator *iter = table->NewIterator(ro);
   std::string r;
-  for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+  for (iter->SeekToFirst(); iter->Valid(); iter->Next())
+  {
     r.clear();
     ParsedInternalKey key;
-    if (!ParseInternalKey(iter->key(), &key)) {
+    if (!ParseInternalKey(iter->key(), &key))
+    {
       r = "badkey '";
       AppendEscapedStringTo(&r, iter->key());
       r += "' => '";
       AppendEscapedStringTo(&r, iter->value());
       r += "'\n";
       dst->Append(r);
-    } else {
+    }
+    else
+    {
       r = "'";
       AppendEscapedStringTo(&r, key.user_key);
       r += "' @ ";
       AppendNumberTo(&r, key.sequence);
       r += " : ";
-      if (key.type == kTypeDeletion) {
+      if (key.type == kTypeDeletion)
+      {
         r += "del";
-      } else if (key.type == kTypeValue) {
+      }
+      else if (key.type == kTypeValue)
+      {
         r += "val";
-      } else {
+      }
+      else
+      {
         AppendNumberTo(&r, key.type);
       }
       r += " => '";
@@ -197,7 +227,8 @@ Status DumpTable(Env* env, const std::string& fname, WritableFile* dst) {
     }
   }
   s = iter->status();
-  if (!s.ok()) {
+  if (!s.ok())
+  {
     dst->Append("iterator error: " + s.ToString() + "\n");
   }
 
@@ -209,20 +240,22 @@ Status DumpTable(Env* env, const std::string& fname, WritableFile* dst) {
 
 }  // namespace
 
-Status DumpFile(Env* env, const std::string& fname, WritableFile* dst) {
+Status DumpFile(Env *env, const std::string &fname, WritableFile *dst)
+{
   FileType ftype;
-  if (!GuessType(fname, &ftype)) {
+  if (!GuessType(fname, &ftype))
+  {
     return Status::InvalidArgument(fname + ": unknown file type");
   }
-  switch (ftype) {
+  switch (ftype)
+  {
     /// dump log文件
-    case kLogFile:         return DumpLog(env, fname, dst);
-    /// dump manifest文件
-    case kDescriptorFile:  return DumpDescriptor(env, fname, dst);
-    /// dump sstable文件
-    case kTableFile:       return DumpTable(env, fname, dst);
-    default:
-      break;
+    case kLogFile: return DumpLog(env, fname, dst);
+      /// dump manifest文件
+    case kDescriptorFile: return DumpDescriptor(env, fname, dst);
+      /// dump sstable文件
+    case kTableFile: return DumpTable(env, fname, dst);
+    default:break;
   }
   return Status::InvalidArgument(fname + ": not a dump-able file type");
 }

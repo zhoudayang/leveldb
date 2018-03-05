@@ -18,9 +18,11 @@
 #include "leveldb/slice.h"
 #include "leveldb/status.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-class Iterator {
+class Iterator
+{
  public:
   Iterator();
   virtual ~Iterator();
@@ -40,7 +42,7 @@ class Iterator {
   // Position at the first key in the source that is at or past target.
   // The iterator is Valid() after this call iff the source contains
   // an entry that comes at or past target.
-  virtual void Seek(const Slice& target) = 0;
+  virtual void Seek(const Slice &target) = 0;
 
   // Moves to the next entry in the source.  After this call, Valid() is
   // true iff the iterator was not positioned at the last entry in the source.
@@ -73,29 +75,30 @@ class Iterator {
   // Note that unlike all of the preceding methods, this method is
   // not abstract and therefore clients should not override it.
   // 注册cleanup function， 当iterator被析构时会被调用
-  typedef void (*CleanupFunction)(void* arg1, void* arg2);
+  typedef void (*CleanupFunction)(void *arg1, void *arg2);
   // 这个方法不是abstract方法，所以用户不能覆盖此方法
-  void RegisterCleanup(CleanupFunction function, void* arg1, void* arg2);
+  void RegisterCleanup(CleanupFunction function, void *arg1, void *arg2);
 
  private:
-  struct Cleanup {
+  struct Cleanup
+  {
     CleanupFunction function;
-    void* arg1;
-    void* arg2;
-    Cleanup* next;
+    void *arg1;
+    void *arg2;
+    Cleanup *next;
   };
   Cleanup cleanup_;
 
   // No copying allowed
-  Iterator(const Iterator&);
-  void operator=(const Iterator&);
+  Iterator(const Iterator &);
+  void operator=(const Iterator &);
 };
 
 // Return an empty iterator (yields nothing).
-extern Iterator* NewEmptyIterator();
+extern Iterator *NewEmptyIterator();
 
 // Return an empty iterator with the specified status.
-extern Iterator* NewErrorIterator(const Status& status);
+extern Iterator *NewErrorIterator(const Status &status);
 
 }  // namespace leveldb
 

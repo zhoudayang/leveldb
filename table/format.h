@@ -11,7 +11,8 @@
 #include "leveldb/status.h"
 #include "leveldb/table_builder.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class Block;
 class RandomAccessFile;
@@ -20,7 +21,8 @@ struct ReadOptions;
 // BlockHandle is a pointer to the extent of a file that stores a data
 // block or a meta block.
 // 在文件中的偏移，以及长度
-class BlockHandle {
+class BlockHandle
+{
  public:
   BlockHandle();
 
@@ -33,13 +35,16 @@ class BlockHandle {
   void set_size(uint64_t size) { size_ = size; }
 
   // 向dst指定的地址位置存入offset和size
-  void EncodeTo(std::string* dst) const;
+  void EncodeTo(std::string *dst) const;
   // 从input指定的地址位置获取offset和size
-  Status DecodeFrom(Slice* input);
+  Status DecodeFrom(Slice *input);
 
   // Maximum encoding length of a BlockHandle
   // 两个varint64数占用的空间最大为20bytes
-  enum { kMaxEncodedLength = 10 + 10 };
+  enum
+  {
+    kMaxEncodedLength = 10 + 10
+  };
 
  private:
   uint64_t offset_;
@@ -48,31 +53,35 @@ class BlockHandle {
 
 // Footer encapsulates the fixed information stored at the tail
 // end of every table file.
-class Footer {
+class Footer
+{
  public:
-  Footer() { }
+  Footer() {}
 
   // The block handle for the metaindex block of the table
-  const BlockHandle& metaindex_handle() const { return metaindex_handle_; }
-  void set_metaindex_handle(const BlockHandle& h) { metaindex_handle_ = h; }
+  const BlockHandle &metaindex_handle() const { return metaindex_handle_; }
+  void set_metaindex_handle(const BlockHandle &h) { metaindex_handle_ = h; }
 
   // The block handle for the index block of the table
-  const BlockHandle& index_handle() const {
+  const BlockHandle &index_handle() const
+  {
     return index_handle_;
   }
-  void set_index_handle(const BlockHandle& h) {
+  void set_index_handle(const BlockHandle &h)
+  {
     index_handle_ = h;
   }
 
-  void EncodeTo(std::string* dst) const;
-  Status DecodeFrom(Slice* input);
+  void EncodeTo(std::string *dst) const;
+  Status DecodeFrom(Slice *input);
 
   // Encoded length of a Footer.  Note that the serialization of a
   // Footer will always occupy exactly this many bytes.  It consists
   // of two block handles and a magic number.
   // footer 占用的内存大小为40 byte
-  enum {
-    kEncodedLength = 2*BlockHandle::kMaxEncodedLength + 8
+  enum
+  {
+    kEncodedLength = 2 * BlockHandle::kMaxEncodedLength + 8
   };
 
  private:
@@ -94,7 +103,8 @@ static const size_t kBlockTrailerSize = 5;
 // block struct
 // 记录是否能被cached
 // 记录是否是在堆上分配的内存
-struct BlockContents {
+struct BlockContents
+{
   Slice data;           // Actual contents of data
   bool cachable;        // True iff data can be cached
   bool heap_allocated;  // True iff caller should delete[] data.data()
@@ -103,18 +113,20 @@ struct BlockContents {
 // Read the block identified by "handle" from "file".  On failure
 // return non-OK.  On success fill *result and return OK.
 // 从handle指定的位置读取block
-extern Status ReadBlock(RandomAccessFile* file,
-                        const ReadOptions& options,
-                        const BlockHandle& handle,
-                        BlockContents* result);
+extern Status ReadBlock(RandomAccessFile *file,
+                        const ReadOptions &options,
+                        const BlockHandle &handle,
+                        BlockContents *result);
 
 // Implementation details follow.  Clients should ignore,
 
 // BlockHandle 的默认构造函数
 // 将offset_和size_同时设置为0
 inline BlockHandle::BlockHandle()
-    : offset_(~static_cast<uint64_t>(0)),
-      size_(~static_cast<uint64_t>(0)) {
+    :
+    offset_(~static_cast<uint64_t>(0)),
+    size_(~static_cast<uint64_t>(0))
+{
 }
 
 }  // namespace leveldb

@@ -7,7 +7,8 @@
 
 #include "leveldb/iterator.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 struct ReadOptions;
 
@@ -22,14 +23,14 @@ struct ReadOptions;
 // Uses a supplied function to convert an index_iter value into
 // an iterator over the contents of the corresponding block.
 /// 提供了block_function将index_iter转换为对应block的iterator
-extern Iterator* NewTwoLevelIterator(
-    Iterator* index_iter,
-    Iterator* (*block_function)(
-        void* arg, // Table 对象本身
-        const ReadOptions& options,
-        const Slice& index_value),
-    void* arg,
-    const ReadOptions& options);
+extern Iterator *NewTwoLevelIterator(
+    Iterator *index_iter,
+    Iterator *(*block_function)(
+        void *arg, // Table 对象本身
+        const ReadOptions &options,
+        const Slice &index_value),
+    void *arg,
+    const ReadOptions &options);
 
 }  // namespace leveldb
 

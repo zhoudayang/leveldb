@@ -24,33 +24,36 @@
 #include <string>
 #include "leveldb/status.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class Slice;
 
 /// 对数据库一组读写操作的封装
-class WriteBatch {
+class WriteBatch
+{
  public:
   WriteBatch();
   ~WriteBatch();
 
   // Store the mapping "key->value" in the database.
-  void Put(const Slice& key, const Slice& value);
+  void Put(const Slice &key, const Slice &value);
 
   // If the database contains a mapping for "key", erase it.  Else do nothing.
-  void Delete(const Slice& key);
+  void Delete(const Slice &key);
 
   // Clear all updates buffered in this batch.
   void Clear();
 
   // Support for iterating over the contents of a batch.
-  class Handler {
+  class Handler
+  {
    public:
     virtual ~Handler();
-    virtual void Put(const Slice& key, const Slice& value) = 0;
-    virtual void Delete(const Slice& key) = 0;
+    virtual void Put(const Slice &key, const Slice &value) = 0;
+    virtual void Delete(const Slice &key) = 0;
   };
-  Status Iterate(Handler* handler) const;
+  Status Iterate(Handler *handler) const;
 
  private:
   friend class WriteBatchInternal;

@@ -9,7 +9,8 @@
 #include "leveldb/env.h"
 #include "leveldb/status.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 // Dump the contents of the file named by fname in text format to
 // *dst.  Makes a sequence of dst->Append() calls; each call is passed
@@ -18,7 +19,7 @@ namespace leveldb {
 //
 // Returns a non-OK result if fname does not name a leveldb storage
 // file, or if the file cannot be read.
-Status DumpFile(Env* env, const std::string& fname, WritableFile* dst);
+Status DumpFile(Env *env, const std::string &fname, WritableFile *dst);
 
 }  // namespace leveldb
 

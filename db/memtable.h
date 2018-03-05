@@ -11,7 +11,8 @@
 #include "db/skiplist.h"
 #include "util/arena.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class InternalKeyComparator;
 class Mutex;
@@ -19,20 +20,23 @@ class MemTableIterator;
 
 // MemTable
 /// 基于引用计数管理
-class MemTable {
+class MemTable
+{
  public:
   // MemTables are reference counted.  The initial reference count
   // is zero and the caller must call Ref() at least once.
-  explicit MemTable(const InternalKeyComparator& comparator);
+  explicit MemTable(const InternalKeyComparator &comparator);
 
   // Increase reference count.
   void Ref() { ++refs_; }
 
   // Drop reference count.  Delete if no more references exist.
-  void Unref() {
+  void Unref()
+  {
     --refs_;
     assert(refs_ >= 0);
-    if (refs_ <= 0) {
+    if (refs_ <= 0)
+    {
       delete this;
     }
   }
@@ -49,37 +53,39 @@ class MemTable {
   // iterator are internal keys encoded by AppendInternalKey in the
   // db/format.{h,cc} .
   /// 返回iterator，key的类型是 internal key
-  Iterator* NewIterator();
+  Iterator *NewIterator();
 
   // Add an entry into memtable that maps key to value at the
   // specified sequence number and with the specified type.
   // Typically value will be empty if type==kTypeDeletion.
   /// 将记录添加进入memtable
   void Add(SequenceNumber seq, ValueType type,
-           const Slice& key,
-           const Slice& value);
+           const Slice &key,
+           const Slice &value);
 
   // If memtable contains a value for key, store it in *value and return true.
   // If memtable contains a deletion for key, store a NotFound() error
   // in *status and return true.
   // Else, return false.
   /// 用于查找，key的类型是LookupKey
-  bool Get(const LookupKey& key, std::string* value, Status* s);
+  bool Get(const LookupKey &key, std::string *value, Status *s);
 
  private:
   ~MemTable();  // Private since only Unref() should be used to delete it
 
-  struct KeyComparator {
+  struct KeyComparator
+  {
     const InternalKeyComparator comparator;
-    explicit KeyComparator(const InternalKeyComparator& c) : comparator(c) { }
-    int operator()(const char* a, const char* b) const;
+    explicit KeyComparator(const InternalKeyComparator &c) :
+        comparator(c) {}
+    int operator()(const char *a, const char *b) const;
   };
   // friend class
   friend class MemTableIterator;
   friend class MemTableBackwardIterator;
 
   /// use KeyComparator as comparator of skiplist
-  typedef SkipList<const char*, KeyComparator> Table;
+  typedef SkipList<const char *, KeyComparator> Table;
   // comparator
   KeyComparator comparator_;
   // reference count
@@ -90,8 +96,8 @@ class MemTable {
   Table table_;
 
   // No copying allowed
-  MemTable(const MemTable&);
-  void operator=(const MemTable&);
+  MemTable(const MemTable &);
+  void operator=(const MemTable &);
 };
 
 }  // namespace leveldb

@@ -4,42 +4,50 @@
 
 #include "db/log_writer.h"
 
-#include <stdint.h>
 #include "leveldb/env.h"
 #include "util/coding.h"
 #include "util/crc32c.h"
 
-namespace leveldb {
-namespace log {
+namespace leveldb
+{
+namespace log
+{
 
 /// 预先计算每一个type对应的crc32值
-static void InitTypeCrc(uint32_t* type_crc) {
-  for (int i = 0; i <= kMaxRecordType; i++) {
+static void InitTypeCrc(uint32_t *type_crc)
+{
+  for (int i = 0; i <= kMaxRecordType; i++)
+  {
     char t = static_cast<char>(i);
     type_crc[i] = crc32c::Value(&t, 1);
   }
 }
 
-Writer::Writer(WritableFile* dest)
-    : dest_(dest),
-      block_offset_(0)
+Writer::Writer(WritableFile *dest)
+    :
+    dest_(dest),
+    block_offset_(0)
 {
   /// 初始化各type的crc32值
   InitTypeCrc(type_crc_);
 }
 
-Writer::Writer(WritableFile* dest, uint64_t dest_length)
-    : dest_(dest), block_offset_(dest_length % kBlockSize) {
+Writer::Writer(WritableFile *dest, uint64_t dest_length)
+    :
+    dest_(dest), block_offset_(dest_length % kBlockSize)
+{
   InitTypeCrc(type_crc_);
 }
 
 // destructor, do nothing
-Writer::~Writer() {
+Writer::~Writer()
+{
 }
 
 /// 向数据块之中添加记录
-Status Writer::AddRecord(const Slice& slice) {
-  const char* ptr = slice.data();
+Status Writer::AddRecord(const Slice &slice)
+{
+  const char *ptr = slice.data();
   // 剩余需要写入的数据量
   size_t left = slice.size();
 
@@ -49,14 +57,17 @@ Status Writer::AddRecord(const Slice& slice) {
   /// 如果slice是空的，我们仍然会产生一个0长度的记录
   Status s;
   bool begin = true;
-  do {
+  do
+  {
     /// 剩余空间
     const int leftover = kBlockSize - block_offset_;
     assert(leftover >= 0);
     /// 剩余空间不足以写入header，填充全0
-    if (leftover < kHeaderSize) {
+    if (leftover < kHeaderSize)
+    {
       // Switch to a new block
-      if (leftover > 0) {
+      if (leftover > 0)
+      {
         // Fill the trailer (literal below relies on kHeaderSize being 7)
         assert(kHeaderSize == 7);
         /// 块剩余的空间填充全0
@@ -75,13 +86,20 @@ Status Writer::AddRecord(const Slice& slice) {
 
     RecordType type;
     const bool end = (left == fragment_length);
-    if (begin && end) { // 全部放入此数据块中
+    if (begin && end)
+    { // 全部放入此数据块中
       type = kFullType;
-    } else if (begin) { // 数据的开始部分放入此数据块中
+    }
+    else if (begin)
+    { // 数据的开始部分放入此数据块中
       type = kFirstType;
-    } else if (end) { // 数据的结束部分放入此数据块中
+    }
+    else if (end)
+    { // 数据的结束部分放入此数据块中
       type = kLastType;
-    } else {
+    }
+    else
+    {
       type = kMiddleType; // 数据的中间部分放入此数据块中
     }
 
@@ -94,7 +112,8 @@ Status Writer::AddRecord(const Slice& slice) {
 }
 
 /// 存储物理记录
-Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
+Status Writer::EmitPhysicalRecord(RecordType t, const char *ptr, size_t n)
+{
   assert(n <= 0xffff);  // Must fit in two bytes
   assert(block_offset_ + kHeaderSize + n <= kBlockSize);
 
@@ -115,10 +134,12 @@ Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
 
   // Write the header and the payload
   Status s = dest_->Append(Slice(buf, kHeaderSize));
-  if (s.ok()) {
+  if (s.ok())
+  {
     /// 写入数据部分
     s = dest_->Append(Slice(ptr, n));
-    if (s.ok()) {
+    if (s.ok())
+    {
       // flush data into file
       /// 保证数据落盘
       s = dest_->Flush();

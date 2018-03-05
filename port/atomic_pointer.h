@@ -43,8 +43,10 @@
 #define ARCH_CPU_MIPS_FAMILY 1
 #endif
 
-namespace leveldb {
-namespace port {
+namespace leveldb
+{
+namespace port
+{
 
 // Define MemoryBarrier() if available
 // Windows on x86
@@ -55,7 +57,8 @@ namespace port {
 
 // Mac OS
 #elif defined(OS_MACOSX)
-inline void MemoryBarrier() {
+inline void MemoryBarrier()
+{
   OSMemoryBarrier();
 }
 #define LEVELDB_HAVE_MEMORY_BARRIER
@@ -123,20 +126,24 @@ inline void MemoryBarrier() {
 
 // AtomicPointer built using platform-specific MemoryBarrier()
 #if defined(LEVELDB_HAVE_MEMORY_BARRIER)
-class AtomicPointer {
+class AtomicPointer
+{
  private:
-  void* rep_;
+  void *rep_;
  public:
-  AtomicPointer() { }
-  explicit AtomicPointer(void* p) : rep_(p) {}
-  inline void* NoBarrier_Load() const { return rep_; }
-  inline void NoBarrier_Store(void* v) { rep_ = v; }
-  inline void* Acquire_Load() const {
-    void* result = rep_;
+  AtomicPointer() {}
+  explicit AtomicPointer(void *p) :
+      rep_(p) {}
+  inline void *NoBarrier_Load() const { return rep_; }
+  inline void NoBarrier_Store(void *v) { rep_ = v; }
+  inline void *Acquire_Load() const
+  {
+    void *result = rep_;
     MemoryBarrier();
     return result;
   }
-  inline void Release_Store(void* v) {
+  inline void Release_Store(void *v)
+  {
     MemoryBarrier();
     rep_ = v;
   }

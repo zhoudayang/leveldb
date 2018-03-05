@@ -4,25 +4,26 @@
 
 #include "util/testharness.h"
 
-#include <string>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+namespace leveldb
+{
+namespace test
+{
 
-namespace leveldb {
-namespace test {
-
-namespace {
-struct Test {
-  const char* base;
-  const char* name;
+namespace
+{
+struct Test
+{
+  const char *base;
+  const char *name;
   void (*func)();
 };
-std::vector<Test>* tests;
+std::vector<Test> *tests;
 }
 
-bool RegisterTest(const char* base, const char* name, void (*func)()) {
-  if (tests == NULL) {
+bool RegisterTest(const char *base, const char *name, void (*func)())
+{
+  if (tests == NULL)
+  {
     tests = new std::vector<Test>;
   }
   Test t;
@@ -33,18 +34,23 @@ bool RegisterTest(const char* base, const char* name, void (*func)()) {
   return true;
 }
 
-int RunAllTests() {
-  const char* matcher = getenv("LEVELDB_TESTS");
+int RunAllTests()
+{
+  const char *matcher = getenv("LEVELDB_TESTS");
 
   int num = 0;
-  if (tests != NULL) {
-    for (size_t i = 0; i < tests->size(); i++) {
-      const Test& t = (*tests)[i];
-      if (matcher != NULL) {
+  if (tests != NULL)
+  {
+    for (size_t i = 0; i < tests->size(); i++)
+    {
+      const Test &t = (*tests)[i];
+      if (matcher != NULL)
+      {
         std::string name = t.base;
         name.push_back('.');
         name.append(t.name);
-        if (strstr(name.c_str(), matcher) == NULL) {
+        if (strstr(name.c_str(), matcher) == NULL)
+        {
           continue;
         }
       }
@@ -57,17 +63,20 @@ int RunAllTests() {
   return 0;
 }
 
-std::string TmpDir() {
+std::string TmpDir()
+{
   std::string dir;
   Status s = Env::Default()->GetTestDirectory(&dir);
   ASSERT_TRUE(s.ok()) << s.ToString();
   return dir;
 }
 
-int RandomSeed() {
-  const char* env = getenv("TEST_RANDOM_SEED");
+int RandomSeed()
+{
+  const char *env = getenv("TEST_RANDOM_SEED");
   int result = (env != NULL ? atoi(env) : 301);
-  if (result <= 0) {
+  if (result <= 0)
+  {
     result = 301;
   }
   return result;

@@ -9,17 +9,20 @@
 #define STORAGE_LEVELDB_DB_LOG_FORMAT_H_
 
 /// http://luodw.cc/2015/10/18/leveldb-08/
-namespace leveldb {
-namespace log {
+namespace leveldb
+{
+namespace log
+{
 
-enum RecordType {
+enum RecordType
+{
   // Zero is reserved for preallocated files
-  kZeroType = 0,
+      kZeroType = 0,
 
   kFullType = 1, // 记录在块内部已经完整了
 
   // For fragments
-  kFirstType = 2, // 开头
+      kFirstType = 2, // 开头
   kMiddleType = 3, // 中间
   kLastType = 4 // 结尾
 };

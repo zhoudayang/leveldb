@@ -24,8 +24,10 @@
 
 #endif  // defined(LEVELDB_PLATFORM_POSIX_SSE)
 
-namespace leveldb {
-namespace port {
+namespace leveldb
+{
+namespace port
+{
 
 #if defined(LEVELDB_PLATFORM_POSIX_SSE)
 
@@ -66,7 +68,8 @@ static inline bool HaveSSE42() {
 
 // For further improvements see Intel publication at:
 // http://download.intel.com/design/intarch/papers/323405.pdf
-uint32_t AcceleratedCRC32C(uint32_t crc, const char* buf, size_t size) {
+uint32_t AcceleratedCRC32C(uint32_t crc, const char *buf, size_t size)
+{
 #if !defined(LEVELDB_PLATFORM_POSIX_SSE)
   return 0;
 #else

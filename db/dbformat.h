@@ -19,11 +19,13 @@
 // 所以，每次put，db就会新加入一份新的kv数据。即使该key已经存在。
 // 而delete等同于put空的value。为了区分真是的kv数据和删除操作的mock数据，使用
 // ValueType来标志
-namespace leveldb {
+namespace leveldb
+{
 
 // Grouping of constants.  We may want to make some of these
 // parameters set via options.
-namespace config {
+namespace config
+{
 // level的最大值
 static const int kNumLevels = 7;
 
@@ -59,11 +61,12 @@ class InternalKey;
 // DO NOT CHANGE THESE ENUM VALUES: they are embedded in the on-disk
 // data structures.
 
-enum ValueType {
+enum ValueType
+{
   // 数据已经删除
-  kTypeDeletion = 0x0,
+      kTypeDeletion = 0x0,
   // 是有效的value值
-  kTypeValue = 0x1
+      kTypeValue = 0x1
 };
 // kValueTypeForSeek defines the ValueType that should be passed when
 // constructing a ParsedInternalKey object for seeking to a particular
@@ -89,44 +92,49 @@ static const SequenceNumber kMaxSequenceNumber =
 // db 内部操作的key。
 // db 内部需要将user key加入元信息(value_type, sequenceNumber)
 // 一起做处理
-struct ParsedInternalKey {
+struct ParsedInternalKey
+{
   Slice user_key; // 用户的key
   SequenceNumber sequence; // sequence number
   ValueType type; // value 的类型
 
-  ParsedInternalKey() { }  // Intentionally left uninitialized (for speed)
+  ParsedInternalKey() {}  // Intentionally left uninitialized (for speed)
   // normal constructor
-  ParsedInternalKey(const Slice& u, const SequenceNumber& seq, ValueType t)
-      : user_key(u), sequence(seq), type(t) { }
+  ParsedInternalKey(const Slice &u, const SequenceNumber &seq, ValueType t)
+      :
+      user_key(u), sequence(seq), type(t) {}
   std::string DebugString() const;
 };
 
 // Return the length of the encoding of "key".
 /// key = user_key + (sequence_number + value_type => 8bytes)
-inline size_t InternalKeyEncodingLength(const ParsedInternalKey& key) {
+inline size_t InternalKeyEncodingLength(const ParsedInternalKey &key)
+{
   return key.user_key.size() + 8;
 }
 
 // Append the serialization of "key" to *result.
-extern void AppendInternalKey(std::string* result,
-                              const ParsedInternalKey& key);
+extern void AppendInternalKey(std::string *result,
+                              const ParsedInternalKey &key);
 
 // Attempt to parse an internal key from "internal_key".  On success,
 // stores the parsed data in "*result", and returns true.
 //
 // On error, returns false, leaves "*result" in an undefined state.
-extern bool ParseInternalKey(const Slice& internal_key,
-                             ParsedInternalKey* result);
+extern bool ParseInternalKey(const Slice &internal_key,
+                             ParsedInternalKey *result);
 
 // Returns the user key portion of an internal key.
 /// 从internal key之中提取user_key, 跳过最后8bytes
-inline Slice ExtractUserKey(const Slice& internal_key) {
+inline Slice ExtractUserKey(const Slice &internal_key)
+{
   assert(internal_key.size() >= 8);
   return Slice(internal_key.data(), internal_key.size() - 8);
 }
 
 /// internal_key的最后8bytes是value_type，提取出来返回
-inline ValueType ExtractValueType(const Slice& internal_key) {
+inline ValueType ExtractValueType(const Slice &internal_key)
+{
   assert(internal_key.size() >= 8);
   const size_t n = internal_key.size();
   uint64_t num = DecodeFixed64(internal_key.data() + n - 8);
@@ -142,58 +150,66 @@ inline ValueType ExtractValueType(const Slice& internal_key) {
 // InternalKeyComparator中FindShortestSeparator() / FindShortSuccessor() 的实现
 // 仅从传入的内部key的参数，解析出user-key, 然后再调用user-comparator的对应接口。
 /// user_key小，sequence number更大的排在前面
-class InternalKeyComparator : public Comparator {
+class InternalKeyComparator : public Comparator
+{
  private:
-  const Comparator* user_comparator_;
+  const Comparator *user_comparator_;
  public:
-  explicit InternalKeyComparator(const Comparator* c) : user_comparator_(c) { }
-  virtual const char* Name() const;
-  virtual int Compare(const Slice& a, const Slice& b) const;
+  explicit InternalKeyComparator(const Comparator *c) :
+      user_comparator_(c) {}
+  virtual const char *Name() const;
+  virtual int Compare(const Slice &a, const Slice &b) const;
   virtual void FindShortestSeparator(
-      std::string* start,
-      const Slice& limit) const;
-  virtual void FindShortSuccessor(std::string* key) const;
+      std::string *start,
+      const Slice &limit) const;
+  virtual void FindShortSuccessor(std::string *key) const;
 
-  const Comparator* user_comparator() const { return user_comparator_; }
+  const Comparator *user_comparator() const { return user_comparator_; }
 
-  int Compare(const InternalKey& a, const InternalKey& b) const;
+  int Compare(const InternalKey &a, const InternalKey &b) const;
 };
 
 // Filter policy wrapper that converts from internal keys to user keys
-class InternalFilterPolicy : public FilterPolicy {
+class InternalFilterPolicy : public FilterPolicy
+{
  private:
-  const FilterPolicy* const user_policy_;
+  const FilterPolicy *const user_policy_;
  public:
-  explicit InternalFilterPolicy(const FilterPolicy* p) : user_policy_(p) { }
-  virtual const char* Name() const;
-  virtual void CreateFilter(const Slice* keys, int n, std::string* dst) const;
-  virtual bool KeyMayMatch(const Slice& key, const Slice& filter) const;
+  explicit InternalFilterPolicy(const FilterPolicy *p) :
+      user_policy_(p) {}
+  virtual const char *Name() const;
+  virtual void CreateFilter(const Slice *keys, int n, std::string *dst) const;
+  virtual bool KeyMayMatch(const Slice &key, const Slice &filter) const;
 };
 
 // Modules in this directory should keep internal keys wrapped inside
 // the following class instead of plain strings so that we do not
 // incorrectly use string comparisons instead of an InternalKeyComparator.
-class InternalKey {
+class InternalKey
+{
  private:
   std::string rep_;
  public:
-  InternalKey() { }   // Leave rep_ as empty to indicate it is invalid
-  InternalKey(const Slice& user_key, SequenceNumber s, ValueType t) {
+  InternalKey() {}   // Leave rep_ as empty to indicate it is invalid
+  InternalKey(const Slice &user_key, SequenceNumber s, ValueType t)
+  {
     /// 将user_key, sequence number, value type 组合起来存入rep_
     AppendInternalKey(&rep_, ParsedInternalKey(user_key, s, t));
   }
 
   // reset rep_
-  void DecodeFrom(const Slice& s) { rep_.assign(s.data(), s.size()); }
+  void DecodeFrom(const Slice &s) { rep_.assign(s.data(), s.size()); }
 
-  Slice Encode() const {
+  Slice Encode() const
+  {
     assert(!rep_.empty());
     return rep_;
   }
 
   Slice user_key() const { return ExtractUserKey(rep_); }
 
-  void SetFrom(const ParsedInternalKey& p) {
+  void SetFrom(const ParsedInternalKey &p)
+  {
     rep_.clear();
     AppendInternalKey(&rep_, p);
   }
@@ -205,15 +221,20 @@ class InternalKey {
 
 /// compare two internal key, use Compare function
 inline int InternalKeyComparator::Compare(
-    const InternalKey& a, const InternalKey& b) const {
+    const InternalKey &a, const InternalKey &b) const
+{
   return Compare(a.Encode(), b.Encode());
 }
 
 /// parse internal key, store in result
-inline bool ParseInternalKey(const Slice& internal_key,
-                             ParsedInternalKey* result) {
+inline bool ParseInternalKey(const Slice &internal_key,
+                             ParsedInternalKey *result)
+{
   const size_t n = internal_key.size();
-  if (n < 8) return false;
+  if (n < 8)
+  {
+    return false;
+  }
   uint64_t num = DecodeFixed64(internal_key.data() + n - 8);
   unsigned char c = num & 0xff;
   // get sequence number
@@ -233,17 +254,19 @@ inline bool ParseInternalKey(const Slice& internal_key,
 // userkey_len  userkey_data sequenceNumber/ValueType
 // varint32     userkey_len  uint64
 // 对memtable进行lookup时使用[start,end],对sstable进行look up时使用[kstart,end]
-class LookupKey {
+class LookupKey
+{
  public:
   // Initialize *this for looking up user_key at a snapshot with
   // the specified sequence number.
-  LookupKey(const Slice& user_key, SequenceNumber sequence);
+  LookupKey(const Slice &user_key, SequenceNumber sequence);
 
   ~LookupKey();
-
+  /// 在internal_key的基础之上，在加上长度
   // Return a key suitable for lookup in a MemTable.
   Slice memtable_key() const { return Slice(start_, end_ - start_); }
 
+  /// 在user_key的基础上，加上版本号，以及value type
   // Return an internal key (suitable for passing to an internal iterator)
   Slice internal_key() const { return Slice(kstart_, end_ - kstart_); }
 
@@ -259,19 +282,23 @@ class LookupKey {
   //                                    <-- end_
   // The array is a suitable MemTable key.
   // The suffix starting with "userkey" can be used as an InternalKey.
-  const char* start_;
-  const char* kstart_;
-  const char* end_;
+  const char *start_;
+  const char *kstart_;
+  const char *end_;
   char space_[200];      // Avoid allocation for short keys
 
   // No copying allowed
-  LookupKey(const LookupKey&);
-  void operator=(const LookupKey&);
+  LookupKey(const LookupKey &);
+  void operator=(const LookupKey &);
 };
 
 /// destructor of LoopupKey
-inline LookupKey::~LookupKey() {
-  if (start_ != space_) delete[] start_;
+inline LookupKey::~LookupKey()
+{
+  if (start_ != space_)
+  {
+    delete[] start_;
+  }
 }
 
 }  // namespace leveldb

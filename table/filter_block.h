@@ -18,7 +18,8 @@
 
 // complete 2017-06-09
 
-namespace leveldb {
+namespace leveldb
+{
 
 class FilterPolicy;
 
@@ -28,18 +29,19 @@ class FilterPolicy;
 //
 // The sequence of calls to FilterBlockBuilder must match the regexp:
 //      (StartBlock AddKey*)* Finish
-class FilterBlockBuilder {
+class FilterBlockBuilder
+{
  public:
-  explicit FilterBlockBuilder(const FilterPolicy*);
+  explicit FilterBlockBuilder(const FilterPolicy *);
 
   void StartBlock(uint64_t block_offset);
-  void AddKey(const Slice& key);
+  void AddKey(const Slice &key);
   Slice Finish();
 
  private:
   void GenerateFilter();
 
-  const FilterPolicy* policy_;
+  const FilterPolicy *policy_;
   std::string keys_;              // Flattened key contents
   std::vector<size_t> start_;     // Starting index in keys_ of each key
   std::string result_;            // Filter data computed so far
@@ -47,20 +49,21 @@ class FilterBlockBuilder {
   std::vector<uint32_t> filter_offsets_;
 
   // No copying allowed
-  FilterBlockBuilder(const FilterBlockBuilder&);
-  void operator=(const FilterBlockBuilder&);
+  FilterBlockBuilder(const FilterBlockBuilder &);
+  void operator=(const FilterBlockBuilder &);
 };
 
-class FilterBlockReader {
+class FilterBlockReader
+{
  public:
- // REQUIRES: "contents" and *policy must stay live while *this is live.
-  FilterBlockReader(const FilterPolicy* policy, const Slice& contents);
-  bool KeyMayMatch(uint64_t block_offset, const Slice& key);
+  // REQUIRES: "contents" and *policy must stay live while *this is live.
+  FilterBlockReader(const FilterPolicy *policy, const Slice &contents);
+  bool KeyMayMatch(uint64_t block_offset, const Slice &key);
 
  private:
-  const FilterPolicy* policy_;
-  const char* data_;    // Pointer to filter data (at block-start)
-  const char* offset_;  // Pointer to beginning of offset array (at block-end)
+  const FilterPolicy *policy_;
+  const char *data_;    // Pointer to filter data (at block-start)
+  const char *offset_;  // Pointer to beginning of offset array (at block-end)
   size_t num_;          // Number of entries in offset array
   size_t base_lg_;      // Encoding parameter (see kFilterBaseLg in .cc file)
 };

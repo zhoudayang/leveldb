@@ -10,11 +10,13 @@
 #include <vector>
 #include "db/dbformat.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class VersionSet;
 
-struct FileMetaData {
+struct FileMetaData
+{
   int refs;  // reference count
   int allowed_seeks;          // Seeks allowed until compaction compact之前允许的seek次数
   uint64_t number;            // number of file
@@ -22,50 +24,58 @@ struct FileMetaData {
   InternalKey smallest;       // Smallest internal key served by table / sstable文件的最小key
   InternalKey largest;        // Largest internal key served by table / sstable文件的最大key
 
-  FileMetaData() : refs(0), allowed_seeks(1 << 30), file_size(0) { }
+  FileMetaData() :
+      refs(0), allowed_seeks(1 << 30), file_size(0) {}
 };
 
-class VersionEdit {
+class VersionEdit
+{
  public:
   VersionEdit() { Clear(); }
-  ~VersionEdit() { }
+  ~VersionEdit() {}
 
   /// 清空记录
   void Clear();
 
   // set comparator name
-  void SetComparatorName(const Slice& name) {
+  void SetComparatorName(const Slice &name)
+  {
     has_comparator_ = true;
     comparator_ = name.ToString();
   }
-  
+
   // set log number
-  void SetLogNumber(uint64_t num) {
+  void SetLogNumber(uint64_t num)
+  {
     has_log_number_ = true;
     log_number_ = num;
   }
 
   // set prev log number
-  void SetPrevLogNumber(uint64_t num) {
+  void SetPrevLogNumber(uint64_t num)
+  {
     has_prev_log_number_ = true;
     prev_log_number_ = num;
   }
-  
+
   // set next file number
-  void SetNextFile(uint64_t num) {
+  void SetNextFile(uint64_t num)
+  {
     has_next_file_number_ = true;
     next_file_number_ = num;
   }
-  
+
   // set last sequence
-  void SetLastSequence(SequenceNumber seq) {
+  void SetLastSequence(SequenceNumber seq)
+  {
     has_last_sequence_ = true;
     last_sequence_ = seq;
   }
-  
+
   // set compact pointer
   /// 记录compaction所在的level和结束的key
-  void SetCompactPointer(int level, const InternalKey& key) {
+  void SetCompactPointer(int level, const InternalKey &key)
+  {
     compact_pointers_.push_back(std::make_pair(level, key));
   }
 
@@ -76,8 +86,9 @@ class VersionEdit {
   /// 以及最大的key
   void AddFile(int level, uint64_t file,
                uint64_t file_size,
-               const InternalKey& smallest,
-               const InternalKey& largest) {
+               const InternalKey &smallest,
+               const InternalKey &largest)
+  {
     FileMetaData f;
     /// refs(0) allowed_seeks(1 << 30)  ... substring from constructor function
     f.number = file;
@@ -90,12 +101,13 @@ class VersionEdit {
 
   // Delete the specified "file" from the specified "level".
   /// 记录删除了file指定的文件
-  void DeleteFile(int level, uint64_t file) {
+  void DeleteFile(int level, uint64_t file)
+  {
     deleted_files_.insert(std::make_pair(level, file));
   }
 
-  void EncodeTo(std::string* dst) const;
-  Status DecodeFrom(const Slice& src);
+  void EncodeTo(std::string *dst) const;
+  Status DecodeFrom(const Slice &src);
 
   std::string DebugString() const;
 
@@ -104,7 +116,7 @@ class VersionEdit {
 
   /// 删除文件集合 <层次，文件编号>
   /// 这个容器采用的是std::set
-  typedef std::set< std::pair<int, uint64_t> > DeletedFileSet;
+  typedef std::set<std::pair<int, uint64_t> > DeletedFileSet;
 
   std::string comparator_; // 比较器的名称
   uint64_t log_number_; // 日志文件编号
@@ -117,11 +129,11 @@ class VersionEdit {
   bool has_next_file_number_; // 是否有下一个file number
   bool has_last_sequence_; // 是否有上一个sequence
   // 压缩点<层次，InternalKey键>
-  std::vector< std::pair<int, InternalKey> > compact_pointers_;
+  std::vector<std::pair<int, InternalKey> > compact_pointers_;
   // 删除文件集合
   DeletedFileSet deleted_files_;
   // 新添加的文件集合
-  std::vector< std::pair<int, FileMetaData> > new_files_;
+  std::vector<std::pair<int, FileMetaData> > new_files_;
 };
 
 }  // namespace leveldb

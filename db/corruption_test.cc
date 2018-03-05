@@ -5,34 +5,33 @@
 #include "leveldb/db.h"
 
 #include <errno.h>
-#include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include "leveldb/cache.h"
 #include "leveldb/env.h"
 #include "leveldb/table.h"
 #include "leveldb/write_batch.h"
 #include "db/db_impl.h"
 #include "db/filename.h"
-#include "db/log_format.h"
 #include "db/version_set.h"
-#include "util/logging.h"
 #include "util/testharness.h"
 #include "util/testutil.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 static const int kValueSize = 1000;
 
-class CorruptionTest {
+class CorruptionTest
+{
  public:
   test::ErrorEnv env_;
   std::string dbname_;
-  Cache* tiny_cache_;
+  Cache *tiny_cache_;
   Options options_;
-  DB* db_;
+  DB *db_;
 
-  CorruptionTest() {
+  CorruptionTest()
+  {
     tiny_cache_ = NewLRUCache(100);
     options_.env = &env_;
     options_.block_cache = tiny_cache_;
@@ -45,32 +44,38 @@ class CorruptionTest {
     options_.create_if_missing = false;
   }
 
-  ~CorruptionTest() {
-     delete db_;
-     DestroyDB(dbname_, Options());
-     delete tiny_cache_;
+  ~CorruptionTest()
+  {
+    delete db_;
+    DestroyDB(dbname_, Options());
+    delete tiny_cache_;
   }
 
-  Status TryReopen() {
+  Status TryReopen()
+  {
     delete db_;
     db_ = NULL;
     return DB::Open(options_, dbname_, &db_);
   }
 
-  void Reopen() {
+  void Reopen()
+  {
     ASSERT_OK(TryReopen());
   }
 
-  void RepairDB() {
+  void RepairDB()
+  {
     delete db_;
     db_ = NULL;
     ASSERT_OK(::leveldb::RepairDB(dbname_, options_));
   }
 
-  void Build(int n) {
+  void Build(int n)
+  {
     std::string key_space, value_space;
     WriteBatch batch;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
+    {
       //if ((i % 100) == 0) fprintf(stderr, "@ %d of %d\n", i, n);
       Slice key = Key(i, &key_space);
       batch.Clear();
@@ -78,39 +83,47 @@ class CorruptionTest {
       WriteOptions options;
       // Corrupt() doesn't work without this sync on windows; stat reports 0 for
       // the file size.
-      if (i == n - 1) {
+      if (i == n - 1)
+      {
         options.sync = true;
       }
       ASSERT_OK(db_->Write(options, &batch));
     }
   }
 
-  void Check(int min_expected, int max_expected) {
+  void Check(int min_expected, int max_expected)
+  {
     int next_expected = 0;
     int missed = 0;
     int bad_keys = 0;
     int bad_values = 0;
     int correct = 0;
     std::string value_space;
-    Iterator* iter = db_->NewIterator(ReadOptions());
-    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+    Iterator *iter = db_->NewIterator(ReadOptions());
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next())
+    {
       uint64_t key;
       Slice in(iter->key());
-      if (in == "" || in == "~") {
+      if (in == "" || in == "~")
+      {
         // Ignore boundary keys.
         continue;
       }
       if (!ConsumeDecimalNumber(&in, &key) ||
           !in.empty() ||
-          key < next_expected) {
+          key < next_expected)
+      {
         bad_keys++;
         continue;
       }
       missed += (key - next_expected);
       next_expected = key + 1;
-      if (iter->value() != Value(key, &value_space)) {
+      if (iter->value() != Value(key, &value_space))
+      {
         bad_values++;
-      } else {
+      }
+      else
+      {
         correct++;
       }
     }
@@ -123,7 +136,8 @@ class CorruptionTest {
     ASSERT_GE(max_expected, correct);
   }
 
-  void Corrupt(FileType filetype, int offset, int bytes_to_corrupt) {
+  void Corrupt(FileType filetype, int offset, int bytes_to_corrupt)
+  {
     // Pick file to corrupt
     std::vector<std::string> filenames;
     ASSERT_OK(env_.GetChildren(dbname_, &filenames));
@@ -131,10 +145,12 @@ class CorruptionTest {
     FileType type;
     std::string fname;
     int picked_number = -1;
-    for (size_t i = 0; i < filenames.size(); i++) {
+    for (size_t i = 0; i < filenames.size(); i++)
+    {
       if (ParseFileName(filenames[i], &number, &type) &&
           type == filetype &&
-          int(number) > picked_number) {  // Pick latest file
+          int(number) > picked_number)
+      {  // Pick latest file
         fname = dbname_ + "/" + filenames[i];
         picked_number = number;
       }
@@ -142,23 +158,30 @@ class CorruptionTest {
     ASSERT_TRUE(!fname.empty()) << filetype;
 
     struct stat sbuf;
-    if (stat(fname.c_str(), &sbuf) != 0) {
-      const char* msg = strerror(errno);
+    if (stat(fname.c_str(), &sbuf) != 0)
+    {
+      const char *msg = strerror(errno);
       ASSERT_TRUE(false) << fname << ": " << msg;
     }
 
-    if (offset < 0) {
+    if (offset < 0)
+    {
       // Relative to end of file; make it absolute
-      if (-offset > sbuf.st_size) {
+      if (-offset > sbuf.st_size)
+      {
         offset = 0;
-      } else {
+      }
+      else
+      {
         offset = sbuf.st_size + offset;
       }
     }
-    if (offset > sbuf.st_size) {
+    if (offset > sbuf.st_size)
+    {
       offset = sbuf.st_size;
     }
-    if (offset + bytes_to_corrupt > sbuf.st_size) {
+    if (offset + bytes_to_corrupt > sbuf.st_size)
+    {
       bytes_to_corrupt = sbuf.st_size - offset;
     }
 
@@ -166,26 +189,32 @@ class CorruptionTest {
     std::string contents;
     Status s = ReadFileToString(Env::Default(), fname, &contents);
     ASSERT_TRUE(s.ok()) << s.ToString();
-    for (int i = 0; i < bytes_to_corrupt; i++) {
+    for (int i = 0; i < bytes_to_corrupt; i++)
+    {
       contents[i + offset] ^= 0x80;
     }
     s = WriteStringToFile(Env::Default(), contents, fname);
     ASSERT_TRUE(s.ok()) << s.ToString();
   }
 
-  int Property(const std::string& name) {
+  int Property(const std::string &name)
+  {
     std::string property;
     int result;
     if (db_->GetProperty(name, &property) &&
-        sscanf(property.c_str(), "%d", &result) == 1) {
+        sscanf(property.c_str(), "%d", &result) == 1)
+    {
       return result;
-    } else {
+    }
+    else
+    {
       return -1;
     }
   }
 
   // Return the ith key
-  Slice Key(int i, std::string* storage) {
+  Slice Key(int i, std::string *storage)
+  {
     char buf[100];
     snprintf(buf, sizeof(buf), "%016d", i);
     storage->assign(buf, strlen(buf));
@@ -193,13 +222,15 @@ class CorruptionTest {
   }
 
   // Return the value to associate with the specified key
-  Slice Value(int k, std::string* storage) {
+  Slice Value(int k, std::string *storage)
+  {
     Random r(k);
     return test::RandomString(&r, kValueSize, storage);
   }
 };
 
-TEST(CorruptionTest, Recovery) {
+TEST(CorruptionTest, Recovery)
+{
   Build(100);
   Check(100, 100);
   Corrupt(kLogFile, 19, 1);      // WriteBatch tag for first record
@@ -210,19 +241,22 @@ TEST(CorruptionTest, Recovery) {
   Check(36, 36);
 }
 
-TEST(CorruptionTest, RecoverWriteError) {
+TEST(CorruptionTest, RecoverWriteError)
+{
   env_.writable_file_error_ = true;
   Status s = TryReopen();
   ASSERT_TRUE(!s.ok());
 }
 
-TEST(CorruptionTest, NewFileErrorDuringWrite) {
+TEST(CorruptionTest, NewFileErrorDuringWrite)
+{
   // Do enough writing to force minor compaction
   env_.writable_file_error_ = true;
   const int num = 3 + (Options().write_buffer_size / kValueSize);
   std::string value_storage;
   Status s;
-  for (int i = 0; s.ok() && i < num; i++) {
+  for (int i = 0; s.ok() && i < num; i++)
+  {
     WriteBatch batch;
     batch.Put("a", Value(100, &value_storage));
     s = db_->Write(WriteOptions(), &batch);
@@ -233,9 +267,10 @@ TEST(CorruptionTest, NewFileErrorDuringWrite) {
   Reopen();
 }
 
-TEST(CorruptionTest, TableFile) {
+TEST(CorruptionTest, TableFile)
+{
   Build(100);
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
   dbi->TEST_CompactRange(0, NULL, NULL);
   dbi->TEST_CompactRange(1, NULL, NULL);
@@ -244,12 +279,13 @@ TEST(CorruptionTest, TableFile) {
   Check(90, 99);
 }
 
-TEST(CorruptionTest, TableFileRepair) {
+TEST(CorruptionTest, TableFileRepair)
+{
   options_.block_size = 2 * kValueSize;  // Limit scope of corruption
   options_.paranoid_checks = true;
   Reopen();
   Build(100);
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
   dbi->TEST_CompactRange(0, NULL, NULL);
   dbi->TEST_CompactRange(1, NULL, NULL);
@@ -260,9 +296,10 @@ TEST(CorruptionTest, TableFileRepair) {
   Check(95, 99);
 }
 
-TEST(CorruptionTest, TableFileIndexData) {
+TEST(CorruptionTest, TableFileIndexData)
+{
   Build(10000);  // Enough to build multiple Tables
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
 
   Corrupt(kTableFile, -2000, 500);
@@ -270,14 +307,16 @@ TEST(CorruptionTest, TableFileIndexData) {
   Check(5000, 9999);
 }
 
-TEST(CorruptionTest, MissingDescriptor) {
+TEST(CorruptionTest, MissingDescriptor)
+{
   Build(1000);
   RepairDB();
   Reopen();
   Check(1000, 1000);
 }
 
-TEST(CorruptionTest, SequenceNumberRecovery) {
+TEST(CorruptionTest, SequenceNumberRecovery)
+{
   ASSERT_OK(db_->Put(WriteOptions(), "foo", "v1"));
   ASSERT_OK(db_->Put(WriteOptions(), "foo", "v2"));
   ASSERT_OK(db_->Put(WriteOptions(), "foo", "v3"));
@@ -298,9 +337,10 @@ TEST(CorruptionTest, SequenceNumberRecovery) {
   ASSERT_EQ("v6", v);
 }
 
-TEST(CorruptionTest, CorruptedDescriptor) {
+TEST(CorruptionTest, CorruptedDescriptor)
+{
   ASSERT_OK(db_->Put(WriteOptions(), "foo", "hello"));
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
   dbi->TEST_CompactRange(0, NULL, NULL);
 
@@ -315,9 +355,10 @@ TEST(CorruptionTest, CorruptedDescriptor) {
   ASSERT_EQ("hello", v);
 }
 
-TEST(CorruptionTest, CompactionInputError) {
+TEST(CorruptionTest, CompactionInputError)
+{
   Build(10);
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
   const int last = config::kMaxMemCompactLevel;
   ASSERT_EQ(1, Property("leveldb.num-files-at-level" + NumberToString(last)));
@@ -330,14 +371,16 @@ TEST(CorruptionTest, CompactionInputError) {
   Check(10000, 10000);
 }
 
-TEST(CorruptionTest, CompactionInputErrorParanoid) {
+TEST(CorruptionTest, CompactionInputErrorParanoid)
+{
   options_.paranoid_checks = true;
   options_.write_buffer_size = 512 << 10;
   Reopen();
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
 
   // Make multiple inputs so we need to compact.
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2; i++)
+  {
     Build(10);
     dbi->TEST_CompactMemTable();
     Corrupt(kTableFile, 100, 1);
@@ -351,9 +394,10 @@ TEST(CorruptionTest, CompactionInputErrorParanoid) {
   ASSERT_TRUE(!s.ok()) << "write did not fail in corrupted paranoid db";
 }
 
-TEST(CorruptionTest, UnrelatedKeys) {
+TEST(CorruptionTest, UnrelatedKeys)
+{
   Build(10);
-  DBImpl* dbi = reinterpret_cast<DBImpl*>(db_);
+  DBImpl *dbi = reinterpret_cast<DBImpl *>(db_);
   dbi->TEST_CompactMemTable();
   Corrupt(kTableFile, 100, 1);
 
@@ -369,6 +413,7 @@ TEST(CorruptionTest, UnrelatedKeys) {
 
 }  // namespace leveldb
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   return leveldb::test::RunAllTests();
 }

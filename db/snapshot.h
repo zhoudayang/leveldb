@@ -8,14 +8,16 @@
 #include "db/dbformat.h"
 #include "leveldb/db.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 class SnapshotList;
 
 // Snapshots are kept in a doubly-linked list in the DB.
 // Each SnapshotImpl corresponds to a particular sequence number.
 /// snapshots存在DB的双向链表之中，每一个SnapshotImpl对应一个结点
-class SnapshotImpl : public Snapshot {
+class SnapshotImpl : public Snapshot
+{
  public:
   SequenceNumber number_;  // const after creation
 
@@ -23,27 +25,38 @@ class SnapshotImpl : public Snapshot {
   friend class SnapshotList;
 
   // SnapshotImpl is kept in a doubly-linked circular list
-  SnapshotImpl* prev_;
-  SnapshotImpl* next_;
+  SnapshotImpl *prev_;
+  SnapshotImpl *next_;
 
-  SnapshotList* list_;                 // just for sanity checks
+  SnapshotList *list_;                 // just for sanity checks
 };
 
-class SnapshotList {
+class SnapshotList
+{
  public:
-  SnapshotList() {
+  SnapshotList()
+  {
     list_.prev_ = &list_;
     list_.next_ = &list_;
   }
 
   bool empty() const { return list_.next_ == &list_; }
-  SnapshotImpl* oldest() const { assert(!empty()); return list_.next_; }
-  SnapshotImpl* newest() const { assert(!empty()); return list_.prev_; }
+  SnapshotImpl *oldest() const
+  {
+    assert(!empty());
+    return list_.next_;
+  }
+  SnapshotImpl *newest() const
+  {
+    assert(!empty());
+    return list_.prev_;
+  }
 
   /// 在链表头部插入一个新的结点
-  const SnapshotImpl* New(SequenceNumber seq) {
+  const SnapshotImpl *New(SequenceNumber seq)
+  {
     /// 创建结点
-    SnapshotImpl* s = new SnapshotImpl;
+    SnapshotImpl *s = new SnapshotImpl;
     /// 记录sequence
     s->number_ = seq;
     s->list_ = this;
@@ -55,7 +68,8 @@ class SnapshotList {
   }
 
   /// 从list中删除s所对应的节点
-  void Delete(const SnapshotImpl* s) {
+  void Delete(const SnapshotImpl *s)
+  {
     assert(s->list_ == this);
     s->prev_->next_ = s->next_;
     s->next_->prev_ = s->prev_;

@@ -7,16 +7,18 @@
 
 #include <string>
 
-namespace leveldb {
+namespace leveldb
+{
 
-class Histogram {
+class Histogram
+{
  public:
-  Histogram() { }
-  ~Histogram() { }
+  Histogram() {}
+  ~Histogram() {}
 
   void Clear();
   void Add(double value);
-  void Merge(const Histogram& other);
+  void Merge(const Histogram &other);
 
   std::string ToString() const;
 
@@ -27,7 +29,10 @@ class Histogram {
   double sum_;
   double sum_squares_;
 
-  enum { kNumBuckets = 154 };
+  enum
+  {
+    kNumBuckets = 154
+  };
   static const double kBucketLimit[kNumBuckets];
   double buckets_[kNumBuckets];
 

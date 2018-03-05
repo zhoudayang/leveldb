@@ -4,22 +4,27 @@
 
 #include "leveldb/iterator.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-Iterator::Iterator() {
+Iterator::Iterator()
+{
   cleanup_.function = NULL;
   cleanup_.next = NULL;
 }
 
 // 依次调用所有注册的cleanup function
-Iterator::~Iterator() {
-  if (cleanup_.function != NULL) {
+Iterator::~Iterator()
+{
+  if (cleanup_.function != NULL)
+  {
     // call clean up function
     (*cleanup_.function)(cleanup_.arg1, cleanup_.arg2);
-    for (Cleanup* c = cleanup_.next; c != NULL; ) {
+    for (Cleanup *c = cleanup_.next; c != NULL;)
+    {
       // for each elem in cleanup_ list, call clean up function and delete it
       (*c->function)(c->arg1, c->arg2);
-      Cleanup* next = c->next;
+      Cleanup *next = c->next;
       delete c;
       c = next;
     }
@@ -28,12 +33,16 @@ Iterator::~Iterator() {
 
 // Register new cleanup function
 // 注册新的cleanup function
-void Iterator::RegisterCleanup(CleanupFunction func, void* arg1, void* arg2) {
+void Iterator::RegisterCleanup(CleanupFunction func, void *arg1, void *arg2)
+{
   assert(func != NULL);
-  Cleanup* c;
-  if (cleanup_.function == NULL) {
+  Cleanup *c;
+  if (cleanup_.function == NULL)
+  {
     c = &cleanup_;
-  } else {
+  }
+  else
+  {
     c = new Cleanup;
     c->next = cleanup_.next;
     cleanup_.next = c;
@@ -44,31 +53,44 @@ void Iterator::RegisterCleanup(CleanupFunction func, void* arg1, void* arg2) {
 }
 
 // simple Empty iterator的定义，需要指定初始的状态
-namespace {
+namespace
+{
 // an empty iterator, not valid implementation
-class EmptyIterator : public Iterator {
+class EmptyIterator : public Iterator
+{
  public:
-  EmptyIterator(const Status& s) : status_(s) { }
+  EmptyIterator(const Status &s) :
+      status_(s) {}
   virtual bool Valid() const { return false; }
-  virtual void Seek(const Slice& target) { }
-  virtual void SeekToFirst() { }
-  virtual void SeekToLast() { }
+  virtual void Seek(const Slice &target) {}
+  virtual void SeekToFirst() {}
+  virtual void SeekToLast() {}
   virtual void Next() { assert(false); }
   virtual void Prev() { assert(false); }
-  Slice key() const { assert(false); return Slice(); }
-  Slice value() const { assert(false); return Slice(); }
+  Slice key() const
+  {
+    assert(false);
+    return Slice();
+  }
+  Slice value() const
+  {
+    assert(false);
+    return Slice();
+  }
   virtual Status status() const { return status_; }
  private:
   Status status_;
 };
 }  // namespace
 
-Iterator* NewEmptyIterator() {
+Iterator *NewEmptyIterator()
+{
   return new EmptyIterator(Status::OK());
 }
 
 // new iterator, begin with given status
-Iterator* NewErrorIterator(const Status& status) {
+Iterator *NewErrorIterator(const Status &status)
+{
   return new EmptyIterator(status);
 }
 

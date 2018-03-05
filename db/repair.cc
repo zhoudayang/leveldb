@@ -26,64 +26,71 @@
 
 #include "db/builder.h"
 #include "db/db_impl.h"
-#include "db/dbformat.h"
 #include "db/filename.h"
 #include "db/log_reader.h"
-#include "db/log_writer.h"
 #include "db/memtable.h"
 #include "db/table_cache.h"
 #include "db/version_edit.h"
 #include "db/write_batch_internal.h"
-#include "leveldb/comparator.h"
-#include "leveldb/db.h"
-#include "leveldb/env.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
-namespace {
+namespace
+{
 
-class Repairer {
+class Repairer
+{
  public:
-  Repairer(const std::string& dbname, const Options& options)
-      : dbname_(dbname),
-        env_(options.env),
-        icmp_(options.comparator),
-        ipolicy_(options.filter_policy),
-        options_(SanitizeOptions(dbname, &icmp_, &ipolicy_, options)),
-        owns_info_log_(options_.info_log != options.info_log),
-        owns_cache_(options_.block_cache != options.block_cache),
-        next_file_number_(1) {
+  Repairer(const std::string &dbname, const Options &options)
+      :
+      dbname_(dbname),
+      env_(options.env),
+      icmp_(options.comparator),
+      ipolicy_(options.filter_policy),
+      options_(SanitizeOptions(dbname, &icmp_, &ipolicy_, options)),
+      owns_info_log_(options_.info_log != options.info_log),
+      owns_cache_(options_.block_cache != options.block_cache),
+      next_file_number_(1)
+  {
     // TableCache can be small since we expect each table to be opened once.
     table_cache_ = new TableCache(dbname_, &options_, 10);
   }
 
-  ~Repairer() {
+  ~Repairer()
+  {
     delete table_cache_;
-    if (owns_info_log_) {
+    if (owns_info_log_)
+    {
       delete options_.info_log;
     }
-    if (owns_cache_) {
+    if (owns_cache_)
+    {
       delete options_.block_cache;
     }
   }
 
-  Status Run() {
+  Status Run()
+  {
     Status status = FindFiles();
-    if (status.ok()) {
+    if (status.ok())
+    {
       ConvertLogFilesToTables();
       ExtractMetaData();
       status = WriteDescriptor();
     }
-    if (status.ok()) {
+    if (status.ok())
+    {
       unsigned long long bytes = 0;
-      for (size_t i = 0; i < tables_.size(); i++) {
+      for (size_t i = 0; i < tables_.size(); i++)
+      {
         bytes += tables_[i].meta.file_size;
       }
       Log(options_.info_log,
           "**** Repaired leveldb %s; "
-          "recovered %d files; %llu bytes. "
-          "Some data may have been lost. "
-          "****",
+              "recovered %d files; %llu bytes. "
+              "Some data may have been lost. "
+              "****",
           dbname_.c_str(),
           static_cast<int>(tables_.size()),
           bytes);
@@ -92,19 +99,20 @@ class Repairer {
   }
 
  private:
-  struct TableInfo {
+  struct TableInfo
+  {
     FileMetaData meta;
     SequenceNumber max_sequence;
   };
 
   std::string const dbname_;
-  Env* const env_;
+  Env *const env_;
   InternalKeyComparator const icmp_;
   InternalFilterPolicy const ipolicy_;
   Options const options_;
   bool owns_info_log_;
   bool owns_cache_;
-  TableCache* table_cache_;
+  TableCache *table_cache_;
   VersionEdit edit_;
 
   std::vector<std::string> manifests_;
@@ -113,31 +121,45 @@ class Repairer {
   std::vector<TableInfo> tables_;
   uint64_t next_file_number_;
 
-  Status FindFiles() {
+  Status FindFiles()
+  {
     std::vector<std::string> filenames;
     Status status = env_->GetChildren(dbname_, &filenames);
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       return status;
     }
-    if (filenames.empty()) {
+    if (filenames.empty())
+    {
       return Status::IOError(dbname_, "repair found no files");
     }
 
     uint64_t number;
     FileType type;
-    for (size_t i = 0; i < filenames.size(); i++) {
-      if (ParseFileName(filenames[i], &number, &type)) {
-        if (type == kDescriptorFile) {
+    for (size_t i = 0; i < filenames.size(); i++)
+    {
+      if (ParseFileName(filenames[i], &number, &type))
+      {
+        if (type == kDescriptorFile)
+        {
           manifests_.push_back(filenames[i]);
-        } else {
-          if (number + 1 > next_file_number_) {
+        }
+        else
+        {
+          if (number + 1 > next_file_number_)
+          {
             next_file_number_ = number + 1;
           }
-          if (type == kLogFile) {
+          if (type == kLogFile)
+          {
             logs_.push_back(number);
-          } else if (type == kTableFile) {
+          }
+          else if (type == kTableFile)
+          {
             table_numbers_.push_back(number);
-          } else {
+          }
+          else
+          {
             // Ignore other files
           }
         }
@@ -146,11 +168,14 @@ class Repairer {
     return status;
   }
 
-  void ConvertLogFilesToTables() {
-    for (size_t i = 0; i < logs_.size(); i++) {
+  void ConvertLogFilesToTables()
+  {
+    for (size_t i = 0; i < logs_.size(); i++)
+    {
       std::string logname = LogFileName(dbname_, logs_[i]);
       Status status = ConvertLogToTable(logs_[i]);
-      if (!status.ok()) {
+      if (!status.ok())
+      {
         Log(options_.info_log, "Log #%llu: ignoring conversion error: %s",
             (unsigned long long) logs_[i],
             status.ToString().c_str());
@@ -159,12 +184,15 @@ class Repairer {
     }
   }
 
-  Status ConvertLogToTable(uint64_t log) {
-    struct LogReporter : public log::Reader::Reporter {
-      Env* env;
-      Logger* info_log;
+  Status ConvertLogToTable(uint64_t log)
+  {
+    struct LogReporter : public log::Reader::Reporter
+    {
+      Env *env;
+      Logger *info_log;
       uint64_t lognum;
-      virtual void Corruption(size_t bytes, const Status& s) {
+      virtual void Corruption(size_t bytes, const Status &s)
+      {
         // We print error messages for corruption, but continue repairing.
         Log(info_log, "Log #%llu: dropping %d bytes; %s",
             (unsigned long long) lognum,
@@ -175,9 +203,10 @@ class Repairer {
 
     // Open the log file
     std::string logname = LogFileName(dbname_, log);
-    SequentialFile* lfile;
+    SequentialFile *lfile;
     Status status = env_->NewSequentialFile(logname, &lfile);
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       return status;
     }
 
@@ -197,20 +226,25 @@ class Repairer {
     std::string scratch;
     Slice record;
     WriteBatch batch;
-    MemTable* mem = new MemTable(icmp_);
+    MemTable *mem = new MemTable(icmp_);
     mem->Ref();
     int counter = 0;
-    while (reader.ReadRecord(&record, &scratch)) {
-      if (record.size() < 12) {
+    while (reader.ReadRecord(&record, &scratch))
+    {
+      if (record.size() < 12)
+      {
         reporter.Corruption(
             record.size(), Status::Corruption("log record too small"));
         continue;
       }
       WriteBatchInternal::SetContents(&batch, record);
       status = WriteBatchInternal::InsertInto(&batch, mem);
-      if (status.ok()) {
+      if (status.ok())
+      {
         counter += WriteBatchInternal::Count(&batch);
-      } else {
+      }
+      else
+      {
         Log(options_.info_log, "Log #%llu: ignoring %s",
             (unsigned long long) log,
             status.ToString().c_str());
@@ -223,13 +257,15 @@ class Repairer {
     // since ExtractMetaData() will also generate edits.
     FileMetaData meta;
     meta.number = next_file_number_++;
-    Iterator* iter = mem->NewIterator();
+    Iterator *iter = mem->NewIterator();
     status = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta);
     delete iter;
     mem->Unref();
     mem = NULL;
-    if (status.ok()) {
-      if (meta.file_size > 0) {
+    if (status.ok())
+    {
+      if (meta.file_size > 0)
+      {
         table_numbers_.push_back(meta.number);
       }
     }
@@ -241,13 +277,16 @@ class Repairer {
     return status;
   }
 
-  void ExtractMetaData() {
-    for (size_t i = 0; i < table_numbers_.size(); i++) {
+  void ExtractMetaData()
+  {
+    for (size_t i = 0; i < table_numbers_.size(); i++)
+    {
       ScanTable(table_numbers_[i]);
     }
   }
 
-  Iterator* NewTableIterator(const FileMetaData& meta) {
+  Iterator *NewTableIterator(const FileMetaData &meta)
+  {
     // Same as compaction iterators: if paranoid_checks are on, turn
     // on checksum verification.
     ReadOptions r;
@@ -255,20 +294,24 @@ class Repairer {
     return table_cache_->NewIterator(r, meta.number, meta.file_size);
   }
 
-  void ScanTable(uint64_t number) {
+  void ScanTable(uint64_t number)
+  {
     TableInfo t;
     t.meta.number = number;
     std::string fname = TableFileName(dbname_, number);
     Status status = env_->GetFileSize(fname, &t.meta.file_size);
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       // Try alternate file name.
       fname = SSTTableFileName(dbname_, number);
       Status s2 = env_->GetFileSize(fname, &t.meta.file_size);
-      if (s2.ok()) {
+      if (s2.ok())
+      {
         status = Status::OK();
       }
     }
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       ArchiveFile(TableFileName(dbname_, number));
       ArchiveFile(SSTTableFileName(dbname_, number));
       Log(options_.info_log, "Table #%llu: dropped: %s",
@@ -279,13 +322,15 @@ class Repairer {
 
     // Extract metadata by scanning through table.
     int counter = 0;
-    Iterator* iter = NewTableIterator(t.meta);
+    Iterator *iter = NewTableIterator(t.meta);
     bool empty = true;
     ParsedInternalKey parsed;
     t.max_sequence = 0;
-    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next())
+    {
       Slice key = iter->key();
-      if (!ParseInternalKey(key, &parsed)) {
+      if (!ParseInternalKey(key, &parsed))
+      {
         Log(options_.info_log, "Table #%llu: unparsable key %s",
             (unsigned long long) t.meta.number,
             EscapeString(key).c_str());
@@ -293,16 +338,19 @@ class Repairer {
       }
 
       counter++;
-      if (empty) {
+      if (empty)
+      {
         empty = false;
         t.meta.smallest.DecodeFrom(key);
       }
       t.meta.largest.DecodeFrom(key);
-      if (parsed.sequence > t.max_sequence) {
+      if (parsed.sequence > t.max_sequence)
+      {
         t.max_sequence = parsed.sequence;
       }
     }
-    if (!iter->status().ok()) {
+    if (!iter->status().ok())
+    {
       status = iter->status();
     }
     delete iter;
@@ -311,78 +359,96 @@ class Repairer {
         counter,
         status.ToString().c_str());
 
-    if (status.ok()) {
+    if (status.ok())
+    {
       tables_.push_back(t);
-    } else {
+    }
+    else
+    {
       RepairTable(fname, t);  // RepairTable archives input file.
     }
   }
 
-  void RepairTable(const std::string& src, TableInfo t) {
+  void RepairTable(const std::string &src, TableInfo t)
+  {
     // We will copy src contents to a new table and then rename the
     // new table over the source.
 
     // Create builder.
     std::string copy = TableFileName(dbname_, next_file_number_++);
-    WritableFile* file;
+    WritableFile *file;
     Status s = env_->NewWritableFile(copy, &file);
-    if (!s.ok()) {
+    if (!s.ok())
+    {
       return;
     }
-    TableBuilder* builder = new TableBuilder(options_, file);
+    TableBuilder *builder = new TableBuilder(options_, file);
 
     // Copy data.
-    Iterator* iter = NewTableIterator(t.meta);
+    Iterator *iter = NewTableIterator(t.meta);
     int counter = 0;
-    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next())
+    {
       builder->Add(iter->key(), iter->value());
       counter++;
     }
     delete iter;
 
     ArchiveFile(src);
-    if (counter == 0) {
+    if (counter == 0)
+    {
       builder->Abandon();  // Nothing to save
-    } else {
+    }
+    else
+    {
       s = builder->Finish();
-      if (s.ok()) {
+      if (s.ok())
+      {
         t.meta.file_size = builder->FileSize();
       }
     }
     delete builder;
     builder = NULL;
 
-    if (s.ok()) {
+    if (s.ok())
+    {
       s = file->Close();
     }
     delete file;
     file = NULL;
 
-    if (counter > 0 && s.ok()) {
+    if (counter > 0 && s.ok())
+    {
       std::string orig = TableFileName(dbname_, t.meta.number);
       s = env_->RenameFile(copy, orig);
-      if (s.ok()) {
+      if (s.ok())
+      {
         Log(options_.info_log, "Table #%llu: %d entries repaired",
             (unsigned long long) t.meta.number, counter);
         tables_.push_back(t);
       }
     }
-    if (!s.ok()) {
+    if (!s.ok())
+    {
       env_->DeleteFile(copy);
     }
   }
 
-  Status WriteDescriptor() {
+  Status WriteDescriptor()
+  {
     std::string tmp = TempFileName(dbname_, 1);
-    WritableFile* file;
+    WritableFile *file;
     Status status = env_->NewWritableFile(tmp, &file);
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       return status;
     }
 
     SequenceNumber max_sequence = 0;
-    for (size_t i = 0; i < tables_.size(); i++) {
-      if (max_sequence < tables_[i].max_sequence) {
+    for (size_t i = 0; i < tables_.size(); i++)
+    {
+      if (max_sequence < tables_[i].max_sequence)
+      {
         max_sequence = tables_[i].max_sequence;
       }
     }
@@ -392,9 +458,10 @@ class Repairer {
     edit_.SetNextFile(next_file_number_);
     edit_.SetLastSequence(max_sequence);
 
-    for (size_t i = 0; i < tables_.size(); i++) {
+    for (size_t i = 0; i < tables_.size(); i++)
+    {
       // TODO(opt): separate out into multiple levels
-      const TableInfo& t = tables_[i];
+      const TableInfo &t = tables_[i];
       edit_.AddFile(0, t.meta.number, t.meta.file_size,
                     t.meta.smallest, t.meta.largest);
     }
@@ -406,39 +473,49 @@ class Repairer {
       edit_.EncodeTo(&record);
       status = log.AddRecord(record);
     }
-    if (status.ok()) {
+    if (status.ok())
+    {
       status = file->Close();
     }
     delete file;
     file = NULL;
 
-    if (!status.ok()) {
+    if (!status.ok())
+    {
       env_->DeleteFile(tmp);
-    } else {
+    }
+    else
+    {
       // Discard older manifests
-      for (size_t i = 0; i < manifests_.size(); i++) {
+      for (size_t i = 0; i < manifests_.size(); i++)
+      {
         ArchiveFile(dbname_ + "/" + manifests_[i]);
       }
 
       // Install new manifest
       status = env_->RenameFile(tmp, DescriptorFileName(dbname_, 1));
-      if (status.ok()) {
+      if (status.ok())
+      {
         status = SetCurrentFile(env_, dbname_, 1);
-      } else {
+      }
+      else
+      {
         env_->DeleteFile(tmp);
       }
     }
     return status;
   }
 
-  void ArchiveFile(const std::string& fname) {
+  void ArchiveFile(const std::string &fname)
+  {
     // Move into another directory.  E.g., for
     //    dir/foo
     // rename to
     //    dir/lost/foo
-    const char* slash = strrchr(fname.c_str(), '/');
+    const char *slash = strrchr(fname.c_str(), '/');
     std::string new_dir;
-    if (slash != NULL) {
+    if (slash != NULL)
+    {
       new_dir.assign(fname.data(), slash - fname.data());
     }
     new_dir.append("/lost");
@@ -453,7 +530,8 @@ class Repairer {
 };
 }  // namespace
 
-Status RepairDB(const std::string& dbname, const Options& options) {
+Status RepairDB(const std::string &dbname, const Options &options)
+{
   Repairer repairer(dbname, options);
   return repairer.Run();
 }
